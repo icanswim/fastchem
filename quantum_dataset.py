@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import os
 import random
 import h5py
+import pickle
 
 import pandas as pd
 from pandas.api.types import CategoricalDtype
@@ -12,7 +13,7 @@ from scipy.io import loadmat
 
 from rdkit import Chem
 
-from torch.utils.data import Dataset, IterableDataset
+from torch.utils.data import Dataset, IterableDataset, ConcatDataset
 from torch import as_tensor, cat
 
 
@@ -269,14 +270,9 @@ class QM9(QDataset):
                   'gap','r2','zpve','U0','U','H','G','Cv']
     
     def __init__(self, in_dir='./data/qm9/qm9.xyz/', n=133885, 
-                           features=['coulomb'], target='H', dim=29*29):
+                 features=['coulomb'], target='H', dim=29*29, use_pickle=True):
         self.features, self.target, self.dim = features, target, dim
-        self.datadic = self.load_data(in_dir, n)
-        unchar = self.get_uncharacterized()
-        for mol in unchar: 
-            try: del self.datadic[mol]
-            except: continue
-        
+        self.datadic = self.load_data(in_dir, n, use_pickle)
         self.ds_idx = list(self.datadic.keys())
         self.embeddings = []
         self.x_cat = []
@@ -296,15 +292,30 @@ class QM9(QDataset):
                 data.append(line)
             return data
         
-    def load_data(self, in_dir, n): # n = non random subset selection
-        datadic = {}
-        for filename in sorted(os.listdir(in_dir)):
-            if filename.endswith('.xyz'):
-                datadic[int(filename[-10:-4])] = QM9Mol(in_dir+filename)
-                if len(datadic) % 10000 == 1: print('Molecules created:', len(datadic))
-                if len(datadic) > n - 1:
-                    break
-        print('Total Molecules created:', len(datadic))
+    def load_data(self, in_dir, n, use_pickle): # n = non random subset selection (for testing)
+        
+        if os.path.exists('./data/qm9/qm9_datadic.p') and use_pickle:
+            print('loading QM9 datadic from a pickled copy...')
+            datadic = pickle.load(open('./data/qm9/qm9_datadic.p', 'rb'))
+        else:
+            datadic = {}
+            for filename in sorted(os.listdir(in_dir)):
+                if filename.endswith('.xyz'):
+                    datadic[int(filename[-10:-4])] = QM9Mol(in_dir+filename)
+                    if len(datadic) % 10000 == 1: print('QM9 molecules created:', len(datadic))
+                    if len(datadic) > n - 1:
+                        break
+                       
+            unchar = self.get_uncharacterized()
+            for mol in unchar: 
+                try: del datadic[mol]
+                except: continue
+            print('total QM9 molecules created:', len(datadic))
+            
+            if use_pickle:
+                print('pickling a copy of the QM9 datadic...')        
+                pickle.dump(datadic, open('./data/qm9/qm9_datadic.p', 'wb'))
+                
         return datadic
     
     def get_uncharacterized(self, in_file='./data/qm9/uncharacterized.txt'):
@@ -343,7 +354,7 @@ class QM9(QDataset):
         
 class Champs(QDataset):
     """https://www.kaggle.com/c/champs-scalar-coupling
-    85003 molecules, 1533536 atoms, 4658146 couplings, 2505542 test
+    85003 molecules, 1533536 atoms, 4658146 couplings, 2505542 test couplings
     
     potential_energy.csv ['molecule_name', 'potential_energy'] 
     scalar_coupling_contributions.csv ['molecule_name', 'atom_index_0', 'atom_index_1', 'type', 'fc', 'sd', 'pso', 'dso'] 
@@ -373,14 +384,14 @@ class Champs(QDataset):
         
     def __getitem__(self, i):
         
-        def check_empty(ds, i):
+        def to_torch(ds, i):
             if len(ds) == 0:
                 return []
             else: return as_tensor(ds[i])
            
-        x_con = check_empty(self.con_ds, i)
-        x_cat = check_empty(self.cat_ds, i)
-        y = check_empty(self.target_ds, i)
+        x_con = to_torch(self.con_ds, i)
+        x_cat = to_torch(self.cat_ds, i)
+        y = to_torch(self.target_ds, i)
         return x_con, x_cat, y
     
     def __len__(self):
@@ -479,16 +490,15 @@ class SuperSet(QDataset):
         x_con1, x_cat1, y1 = self.pds[i]
         x_con2, x_cat2, y2 = self.sds[i]
        
-        def check_empty(in1, in2, dim=0):
+        def concat(in1, in2, dim=0):
             try:
-                return in1.cat(in2, dim=dim)
+                return cat([in1, in2], dim=dim)
             except:
                 if len(in1) != 0: return in1
                 else: return in2
                 
-        x_con = check_empty(x_con1, x_con2)
-        x_cat = check_empty(x_cat1, x_cat2)
-        
+        x_con = concat(x_con1, x_con2)
+        x_cat = concat(x_cat1, x_cat2)
         return x_con, x_cat, y1
         
     def __len__(self):
@@ -497,8 +507,6 @@ class SuperSet(QDataset):
     def load_data(self):
         pass
         
-        
-    
     
     
     
