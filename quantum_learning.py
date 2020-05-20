@@ -4,7 +4,7 @@ import random
 import os
 os.environ['NUMEXPR_MAX_THREADS'] = '16'
 
-from torch import device, nn, cuda, optim, no_grad, save, load
+from torch import device, nn, cuda, optim, no_grad, save, load, cat
 from torch.utils.data import Sampler, DataLoader
 
 import pandas as pd
@@ -51,7 +51,8 @@ class Learn():
                 self.run(flag='test')
                 
             pd.DataFrame(zip(self.train_log, self.val_log)).to_csv(
-                                        './logs/'+start.strftime("%Y%m%d_%H%M"))  
+                                        './logs/'+start.strftime("%Y%m%d_%H%M"))
+            self.view_log('./logs/'+start.strftime('%Y%m%d_%H%M'))
         else: 
             with no_grad():
                 self.run('infer')
@@ -60,7 +61,6 @@ class Learn():
         if save_model: save(self.model.state_dict(), './models/{}.pth'.format(
                                                     start.strftime("%Y%m%d_%H%M")))
         logging.info('learning time: {} \n'.format(elapsed))
-        self.view_log('./logs/'+start.strftime('%Y%m%d_%H%M'))
         print('learning time: {}'.format(elapsed))
         
     def run(self, flag): 
@@ -104,9 +104,10 @@ class Learn():
             print('test loss: {}'.format(e_loss/i))
         if flag == 'infer': 
             logging.info('inference complete')
+            predictions = np.squeeze(cat(predictions, dim=0).cpu().numpy())
             self.predictions = pd.Series(predictions)
-            self.predictions.to_csv('quantum_inference.csv')
-            print('inference complete and saved to csv...')  
+            self.predictions.to_csv('quantum_inference.csv', header=False, index=False)
+            print('inference complete and saved to csv...')
             
     @classmethod    
     def view_log(cls, log_file):
