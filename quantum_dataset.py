@@ -94,6 +94,7 @@ class Molecule(ABC):
         indexlist = np.argsort(noised)
         indexlist = indexlist[::-1]  # invert
         return matrix[indexlist][:,indexlist]
+
     
 class QM9Mol(Molecule):
     
@@ -115,6 +116,7 @@ class QM9Mol(Molecule):
         for atom in xyz[2:self.n_atoms+2]:
             self.xyz.append(atom.strip().split('\t')) # [['atom_type',x,y,z,mulliken],...]
 
+            
 class QDataset(Dataset, ABC):
     """An abstract base class for quantum datasets"""
     @abstractmethod
@@ -449,6 +451,7 @@ class Champs(QDataset):
         
         con_ds = df[self.continuous].values
         cat_ds = df[self.categorical].values
+        self.moleculename = df['molecule_name'].str.slice(start=-6).astype('int64').values
        
         if use_h5:
             print('creating Champs h5 dataset...')
@@ -456,6 +459,8 @@ class Champs(QDataset):
                 cat_ds = h5p.create_dataset('x_cat', data=cat_ds, chunks=True)[()]  # index in with empty tuple [()]
             with h5py.File(in_dir+'champs_con.h5', 'w') as h5p:
                 con_ds = h5p.create_dataset('x_con', data=con_ds, chunks=True)[()]
+            with h5py.File(in_dir+'champs_molecule_name.h5', 'w') as h5p:
+                self.moleculename = h5p.create_dataset('molecule_name', data=self.moleculename, chunks=True)[()]
             if not infer:
                 with h5py.File(in_dir+'champs_target.h5', 'w') as h5p:
                     target_ds = h5p.create_dataset('target', data=target_ds, chunks=True)[()]
@@ -488,14 +493,15 @@ class SuperSet(QDataset):
         
     def __getitem__(self, i):
         x_con1, x_cat1, y1 = self.pds[i]
-        x_con2, x_cat2, y2 = self.sds[i]
+        x_con2, x_cat2, y2 = self.sds[self.pds.moleculename[i]]
        
         def concat(in1, in2, dim=0):
             try:
                 return cat([in1, in2], dim=dim)
             except:
                 if len(in1) != 0: return in1
-                else: return in2
+                elif len(in2) != 0: return in2
+                else: return []
                 
         x_con = concat(x_con1, x_con2)
         x_cat = concat(x_cat1, x_cat2)
@@ -508,10 +514,3 @@ class SuperSet(QDataset):
         pass
         
     
-    
-    
-    
-    
-    
-    
-        
