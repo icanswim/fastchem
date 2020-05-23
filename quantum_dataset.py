@@ -273,6 +273,7 @@ class QM9(QDataset):
     
     def __init__(self, in_dir='./data/qm9/qm9.xyz/', n=133885, 
                  features=['coulomb'], target='H', dim=29*29, use_pickle=True):
+        """dim = length of longest molecule that all molecules will be padded to"""
         self.features, self.target, self.dim = features, target, dim
         self.datadic = self.load_data(in_dir, n, use_pickle)
         self.ds_idx = list(self.datadic.keys())
@@ -375,14 +376,13 @@ class Champs(QDataset):
     types = ['1JHC', '2JHH', '1JHN', '2JHN', '2JHC', '3JHH', '3JHC', '3JHN']
     atomic_n = {'C': 6, 'H': 1, 'N': 7, 'O': 8, 'F': 9}
     
-    def __init__(self, in_dir='./data/', n=4658147, use_h5=True, infer=False):
+    def __init__(self, in_dir='./data/', n=4658147, features=[], use_h5=True, infer=False):
         self.in_dir = in_dir
         self.len = n 
         self.ds_idx = list(range(n))
         self.embeddings = [(32,32,False),(32,32,False),(8,64,True),(5,32,True),(5,32,True)]  
-        self.con_ds, self.cat_ds, self.target_ds = self.load_data(self.in_dir, 
-                                                                  use_h5=use_h5,
-                                                                 infer=infer)
+        self.con_ds, self.cat_ds, self.target_ds = self.load_data(self.in_dir, features,
+                                                                  use_h5, infer)
         
     def __getitem__(self, i):
         
@@ -399,7 +399,7 @@ class Champs(QDataset):
     def __len__(self):
         return self.len
     
-    def load_data(self, in_dir, use_h5, infer):
+    def load_data(self, in_dir, features, use_h5, infer):
         
         self.categorical = ['atom_index_0','atom_index_1','type', 'atom_x', 'atom_y']
         self.continuous = ['mulliken_charge_x','mulliken_charge_y','potential_energy',
@@ -412,7 +412,7 @@ class Champs(QDataset):
                    'atom_index_0', 'atom_index_1', 'type'], index_col=False)
             target_ds = []
         else:
-            self.continuous = ['x_x', 'y_x', 'z_x', 'x_y', 'y_y', 'z_y']
+            self.continuous = ['x_x', 'y_x', 'z_x', 'x_y', 'y_y', 'z_y'] + features
             df = pd.read_csv(in_dir+'train.csv', header=0, names=['id','molecule_name', 
                  'atom_index_0','atom_index_1','type','scalar_coupling_constant'], 
                          index_col=False)
@@ -489,7 +489,7 @@ class SuperSet(QDataset):
         self.sds = SecondaryDS(**s_params)
         
         self.embeddings = self.pds.embeddings + self.sds.embeddings
-        self.ds_idx = self.pds.ds_idx
+        self.ds_idx = self.pds.ds_idx 
         
     def __getitem__(self, i):
         x_con1, x_cat1, y1 = self.pds[i]

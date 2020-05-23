@@ -25,8 +25,9 @@ class Learn():
                                         Model, start.strftime('%Y%m%d_%H%M')))
         self.bs = batch_size
         self.ds = Dataset(**ds_params)
-        logging.info('dataset: {}, batch_size: {}, save_model: {}, load_model: {}'.format(
-                                         type(self.ds), batch_size, save_model, load_model))
+        logging.info('dataset: {}\n{}'.format(type(self.ds), ds_params))
+        logging.info('epochs: {}, batch_size: {}, save_model: {}, load_model: {}'.format(
+                                    epochs, batch_size, save_model, load_model))
         print('{} dataset created...'.format(type(self.ds)))
         model = Model(embeddings=self.ds.embeddings, **model_params)
         if load_model: model.load_state_dict(load(load_model))
