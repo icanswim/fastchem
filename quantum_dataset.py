@@ -276,6 +276,7 @@ class QM9(QDataset):
         """dim = length of longest molecule that all molecules will be padded to"""
         self.features, self.target, self.dim = features, target, dim
         self.datadic = self.load_data(in_dir, n, use_pickle)
+        # filter here
         self.ds_idx = list(self.datadic.keys())
         self.embeddings = []
         self.x_cat = []
@@ -344,9 +345,9 @@ class QM9(QDataset):
         feats = []
         for fea in self.features:
             if fea == 'coulomb': 
-                flat_c = np.reshape(mol.coulomb, -1)
-                pad_c = np.pad(flat_c, (0, self.dim-(len(mol.coulomb)**2)), 'constant')
-                feats.insert(0, pad_c)
+                flat = np.reshape(mol.coulomb, -1)
+                padded = np.pad(flat, (0, self.dim-(len(mol.coulomb)**2)), 'constant')
+                feats.insert(0, padded)
             else: feats.append(load_feature(fea))
        
         x_con = np.concatenate(feats, axis=0)
@@ -376,7 +377,7 @@ class Champs(QDataset):
     types = ['1JHC', '2JHH', '1JHN', '2JHN', '2JHC', '3JHH', '3JHC', '3JHN']
     atomic_n = {'C': 6, 'H': 1, 'N': 7, 'O': 8, 'F': 9}
     
-    def __init__(self, in_dir='./data/', n=4658147, features=[], use_h5=True, infer=False):
+    def __init__(self, in_dir='./data/champs/', n=4658147, features=[], use_h5=True, infer=False):
         self.in_dir = in_dir
         self.len = n 
         self.ds_idx = list(range(n))
