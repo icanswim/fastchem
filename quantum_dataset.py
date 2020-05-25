@@ -452,6 +452,7 @@ class Champs(QDataset):
         
         con_ds = df[self.continuous].values
         cat_ds = df[self.categorical].values
+        # self.moleculename is used by SecondaryDS in the SuperSet class
         self.moleculename = df['molecule_name'].str.slice(start=-6).astype('int64').values
        
         if use_h5:

@@ -16,9 +16,13 @@ class Learn():
     
     def __init__(self, Dataset, Model, Sampler, Optimizer=None, Criterion=None, 
                  model_params={}, ds_params={}, opt_params={}, crit_params={}, 
-                 batch_size=1, epochs=1, save_model=False, load_model=False):
-        """Criterion=None implies inference mode."""
-        
+                 batch_size=1, epochs=1, save_model=False, load_model=False, 
+                 adapt=False):
+        """
+        save_model = True/False
+        load_model = False/'./models/savedmodel.pth'
+        Criterion = None implies inference mode.
+        """
         logging.basicConfig(filename='./logs/quantum.log', level=20)
         start = datetime.now()
         logging.info('New experiment...\n\n model: {}, start time: {}'.format(
@@ -29,10 +33,13 @@ class Learn():
         logging.info('epochs: {}, batch_size: {}, save_model: {}, load_model: {}'.format(
                                     epochs, batch_size, save_model, load_model))
         print('{} dataset created...'.format(type(self.ds)))
+        
         model = Model(embeddings=self.ds.embeddings, **model_params)
         if load_model: model.load_state_dict(load(load_model))
+        if adapt: model.layers.insert(0, nn.Linear(*adapt)) `
         self.model = model.to('cuda:0')
         logging.info(self.model.children)
+        
         self.sampler = Sampler(self.ds.ds_idx)
         
         if Criterion:
@@ -42,14 +49,14 @@ class Learn():
             self.train_log, self.val_log = [], []
             for e in range(epochs):
                 self.sampler.sample_train_val_idx()
-                self.run(flag='train')
+                self.run('train')
                 with no_grad():
-                    self.run(flag='val')
+                    self.run('val')
                 if e % 1 == 0:  
                     print('epoch: {} of {}, train loss: {}, val loss: {}'.format(
-                        e, epochs, self.train_log[-1], self.val_log[-1]))     
+                                e, epochs, self.train_log[-1], self.val_log[-1]))     
             with no_grad():
-                self.run(flag='test')
+                self.run('test')
                 
             pd.DataFrame(zip(self.train_log, self.val_log)).to_csv(
                                         './logs/'+start.strftime("%Y%m%d_%H%M"))
@@ -109,7 +116,15 @@ class Learn():
             self.predictions = pd.Series(predictions)
             self.predictions.to_csv('quantum_inference.csv', header=False, index=False)
             print('inference complete and saved to csv...')
-            
+    
+    def freeze(self, layers):
+        for param in self.model.parameters()[layers]:
+            param.requires_grad = False
+
+    def unfreeze(self, layers):
+        for param in self.model.parameters()[layers]:
+            param.requires_grad = True
+
     @classmethod    
     def view_log(cls, log_file):
         log = pd.read_csv(log_file)

@@ -56,4 +56,5 @@ class FFNet(nn.Module):
         for l in self.layers:
             x = l(x)
         return x
-             
+    
+    
