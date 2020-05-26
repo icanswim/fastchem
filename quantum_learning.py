@@ -36,7 +36,7 @@ class Learn():
         
         model = Model(embeddings=self.ds.embeddings, **model_params)
         if load_model: model.load_state_dict(load(load_model))
-        if adapt: model.layers.insert(0, nn.Linear(*adapt)) `
+        if adapt: model.adapt(adapt)
         self.model = model.to('cuda:0')
         logging.info(self.model.children)
         
@@ -116,14 +116,6 @@ class Learn():
             self.predictions = pd.Series(predictions)
             self.predictions.to_csv('quantum_inference.csv', header=False, index=False)
             print('inference complete and saved to csv...')
-    
-    def freeze(self, layers):
-        for param in self.model.parameters()[layers]:
-            param.requires_grad = False
-
-    def unfreeze(self, layers):
-        for param in self.model.parameters()[layers]:
-            param.requires_grad = True
 
     @classmethod    
     def view_log(cls, log_file):

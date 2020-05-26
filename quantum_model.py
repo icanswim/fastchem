@@ -27,17 +27,19 @@ class FFNet(nn.Module):
             
         config = FFNet.model_config[model_name]
         self.layers = []
-        self.ffunit(D_in, int(config['shape'][0][1]*H), config['dropout'][0], config)
+        self.layers.append(*self.ffunit(D_in, int(config['shape'][0][1]*H), config['dropout'][0]))
         for i, s in enumerate(config['shape'][1:-1]):
-            self.ffunit(int(s[0]*H), int(s[1]*H), config['dropout'][i], config)
+            self.layers.append(*self.ffunit(int(s[0]*H), int(s[1]*H), config['dropout'][i]))
         self.layers.append(nn.Linear(int(config['shape'][-1][0]*H), D_out))     
         self.layers = nn.ModuleList(self.layers)  
         
-    def ffunit(self, D_in, D_out, drop, config):
-        self.layers.append(nn.BatchNorm1d(D_in))
-        self.layers.append(nn.Linear(D_in, D_out))
-        self.layers.append(nn.SELU())
-        self.layers.append(nn.Dropout(drop))
+    def ffunit(self, D_in, D_out, drop):
+        ffu = []
+        ffu.append(nn.BatchNorm1d(D_in))
+        ffu.append(nn.Linear(D_in, D_out))
+        ffu.append(nn.SELU())
+        ffu.append(nn.Dropout(drop))
+        return ffu
  
     def forward(self, x_con, x_cat):
         if len(x_cat) != 0:
@@ -57,4 +59,7 @@ class FFNet(nn.Module):
             x = l(x)
         return x
     
-    
+    def adapt(self, shape):
+        for param in self.parameters():
+            param.requires_grad = False
+        self.layers.insert(0,*ffunit(shape[0], shape[1], 0.2))
