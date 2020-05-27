@@ -63,6 +63,8 @@ class FFNet(nn.Module):
     def adapt(self, shape):
         for param in self.parameters():
             param.requires_grad = False
-        self.layers.insert(0, ffunit(shape[0], shape[1], 0.2))
+        ffu = []
+        ffu.append(self.ffunit(shape[0], shape[1], 0.2))
+        ffu.append(self.layers)
         layers = [l for ffu in self.layers for l in ffu]
         self.layers = layers
