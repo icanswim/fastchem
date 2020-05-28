@@ -35,8 +35,15 @@ class Learn():
                                     epochs, batch_size, save_model, load_model))
         print('{} dataset created...'.format(type(self.ds)))
         
-        model = Model(embeddings=self.ds.embeddings, **model_params)
-        if load_model: model.load_state_dict(load(load_model))
+        if load_model: 
+            try:
+                model = Model(embeddings=self.ds.embeddings, **model_params)
+                model.load_state_dict(load(load_model))
+                model.eval()
+            except:
+                load(load_model)
+        else: 
+            model = Model(embeddings=self.ds.embeddings, **model_params)
         if adapt: model.adapt(adapt)
         self.model = model.to('cuda:0')
         logging.info(self.model.children)
@@ -67,8 +74,10 @@ class Learn():
                 self.run('infer')
         
         elapsed = datetime.now() - start
-        if save_model: save(self.model.state_dict(), './models/{}.pth'.format(
-                                                    start.strftime("%Y%m%d_%H%M")))
+        if save_model and not adapt: save(self.model.state_dict(), './models/{}.pth'.format(
+                                                            start.strftime("%Y%m%d_%H%M")))
+        if save_model and adapt: torch.save(self.model, './models/{}.pth'.format(
+                                                            start.strftime("%Y%m%d_%H%M")))
         logging.info('learning time: {} \n'.format(elapsed))
         print('learning time: {}'.format(elapsed))
         
