@@ -22,6 +22,7 @@ class Learn():
         save_model = True/False
         load_model = False/'./models/savedmodel.pth'
         Criterion = None implies inference mode.
+        adapt = False/(dataset input shape, model input shape) 
         """
         logging.basicConfig(filename='./logs/quantum.log', level=20)
         start = datetime.now()

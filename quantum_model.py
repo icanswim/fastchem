@@ -61,10 +61,13 @@ class FFNet(nn.Module):
         return x
     
     def adapt(self, shape):
-        for param in self.parameters():
+        # freeze the layers
+        for param in self.parameters(): 
             param.requires_grad = False
-        ffu = []
-        ffu.append(self.ffunit(shape[0], shape[1], 0.2))
-        ffu.append(self.layers)
-        layers = [l for ffu in self.layers for l in ffu]
-        self.layers = layers
+        # prepend a trainable adaptor layer    
+        for l in self.ffunit(shape[0], shape[1], 0.2)[::-1]:
+            self.layers.insert(0, l)
+   
+        
+            
+    
