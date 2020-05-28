@@ -39,7 +39,7 @@ class Learn():
             try:
                 model = Model(embeddings=self.ds.embeddings, **model_params)
                 model.load_state_dict(load(load_model))
-                model.eval()
+#                 model.eval()
             except:
                 model = load(load_model)
         else: 
@@ -76,7 +76,7 @@ class Learn():
         elapsed = datetime.now() - start
         if save_model and not adapt: save(self.model.state_dict(), './models/{}.pth'.format(
                                                             start.strftime("%Y%m%d_%H%M")))
-        if save_model and adapt: torch.save(self.model, './models/{}.pth'.format(
+        if save_model and adapt: save(self.model, './models/{}.pth'.format(
                                                             start.strftime("%Y%m%d_%H%M")))
         logging.info('learning time: {} \n'.format(elapsed))
         print('learning time: {}'.format(elapsed))
