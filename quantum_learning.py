@@ -41,7 +41,7 @@ class Learn():
                 model.load_state_dict(load(load_model))
                 model.eval()
             except:
-                load(load_model)
+                model = load(load_model)
         else: 
             model = Model(embeddings=self.ds.embeddings, **model_params)
         if adapt: model.adapt(adapt)
