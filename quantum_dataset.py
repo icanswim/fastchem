@@ -380,10 +380,10 @@ class Champs(QDataset):
     def __init__(self, in_dir='./data/champs/', n=4658147, features=[], use_h5=True, infer=False):
         self.in_dir = in_dir
         self.len = n 
-        self.ds_idx = list(range(n))
         self.embeddings = [(32,32,False),(32,32,False),(8,64,True),(5,32,True),(5,32,True)]  
         self.con_ds, self.cat_ds, self.target_ds = self.load_data(self.in_dir, features,
                                                                   use_h5, infer)
+        self.ds_idx = list(range(len(self.target_ds)))
         
     def __getitem__(self, i):
         
@@ -411,21 +411,19 @@ class Champs(QDataset):
             self.continuous = ['x_x', 'y_x', 'z_x', 'x_y', 'y_y', 'z_y']
             df = pd.read_csv(in_dir+'test.csv', header=0, names=['id', 'molecule_name', 
                    'atom_index_0', 'atom_index_1', 'type'], index_col=False)
-            target_ds = []
+            target_ds = df['id'].values
         else:
             self.continuous = ['x_x', 'y_x', 'z_x', 'x_y', 'y_y', 'z_y'] + features
             df = pd.read_csv(in_dir+'train.csv', header=0, names=['id','molecule_name', 
-                 'atom_index_0','atom_index_1','type','scalar_coupling_constant'], 
-                         index_col=False)
-            target = df.pop(*self.target).astype('float32')
-            target_ds = target.values
+                 'atom_index_0','atom_index_1','type','scalar_coupling_constant'], index_col=False)
+            target_ds = df['scalar_coupling_constant'].values.astype('float32')
           
         pe = pd.read_csv(in_dir+'potential_energy.csv', header=0, names=[u'molecule_name',
-                 'potential_energy'], index_col=False)
+                                             'potential_energy'], index_col=False)
         structures = pd.read_csv(in_dir+'structures.csv', header=0, names=['molecule_name',
-                         'atom_index', 'atom', 'x', 'y', 'z'], index_col=False)
+                             'atom_index', 'atom', 'x', 'y', 'z'], index_col=False)
         mulliken = pd.read_csv(in_dir+'mulliken_charges.csv', header=0, names=['molecule_name',
-                       'atom_index', 'mulliken_charge'], index_col=False)
+                               'atom_index', 'mulliken_charge'], index_col=False)
 
         df = df.merge(mulliken, how='left', left_on=['molecule_name', 'atom_index_0'], 
                                             right_on=['molecule_name', 'atom_index'])
@@ -463,11 +461,10 @@ class Champs(QDataset):
                 con_ds = h5p.create_dataset('x_con', data=con_ds, chunks=True)[()]
             with h5py.File(in_dir+'champs_molecule_name.h5', 'w') as h5p:
                 self.moleculename = h5p.create_dataset('molecule_name', data=self.moleculename, chunks=True)[()]
-            if not infer:
-                with h5py.File(in_dir+'champs_target.h5', 'w') as h5p:
-                    target_ds = h5p.create_dataset('target', data=target_ds, chunks=True)[()]
+            with h5py.File(in_dir+'champs_target.h5', 'w') as h5p:
+                target_ds = h5p.create_dataset('target', data=target_ds, chunks=True)[()]
         
-        return con_ds, cat_ds, np.reshape(target_ds,(-1,1))
+        return con_ds, cat_ds, target_ds
 
     @classmethod
     def inspect_csv(cls, in_dir='./data/'): 

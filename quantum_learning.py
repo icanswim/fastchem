@@ -37,11 +37,14 @@ class Learn():
         
         if load_model: 
             try:
+                print('try')
                 model = Model(embeddings=self.ds.embeddings, **model_params)
                 model.load_state_dict(load(load_model))
-#                 model.eval()
+                print('model loaded from state_dict...')
             except:
+                print('except')
                 model = load(load_model)
+                print('model loaded from pickle...')
         else: 
             model = Model(embeddings=self.ds.embeddings, **model_params)
         if adapt: model.adapt(adapt)
@@ -92,9 +95,10 @@ class Learn():
         def to_cuda(ds):
             if len(ds) == 0: return []
             else: return ds.to('cuda:0', non_blocking=True)
-            
+        print('dataloader', dataloader)    
         for x_con, x_cat, y in dataloader:
             i += self.bs
+            print('i', i)
             x_con = to_cuda(x_con)
             x_cat = to_cuda(x_cat)
             y = to_cuda(y)
@@ -104,8 +108,11 @@ class Learn():
                 
             y_pred = self.model(x_con, x_cat)
             
-            if flag == 'infer': 
-                predictions.append(y_pred)
+            if flag == 'infer':
+                y = y.data.to('cpu').numpy()
+                y_pred = y_pred.data.to('cpu').numpy()
+                predictions.append((y, y_pred)) # y = 'id'
+                
             else:
                 b_loss = self.criterion(y_pred, y)
                 e_loss += b_loss.item()
@@ -114,6 +121,8 @@ class Learn():
                 self.opt.zero_grad()
                 b_loss.backward()
                 self.opt.step()
+                
+        print('i2', i)
 
         if flag == 'train': self.train_log.append(e_loss/i)
         if flag == 'val': self.val_log.append(e_loss/i)
@@ -122,9 +131,9 @@ class Learn():
             print('test loss: {}'.format(e_loss/i))
         if flag == 'infer': 
             logging.info('inference complete')
-            predictions = np.squeeze(cat(predictions, dim=0).cpu().numpy())
-            self.predictions = pd.Series(predictions)
-            self.predictions.to_csv('quantum_inference.csv', header=False, index=False)
+            
+            self.predictions = pd.DataFrame(predictions, columns=['id','scalar_coupling_constant'])
+            self.predictions.to_csv('quantum_inference.csv', header=True, index=False)
             print('inference complete and saved to csv...')
 
     @classmethod    
