@@ -451,7 +451,7 @@ class Champs(QDataset):
         con_ds = df[self.continuous].values
         cat_ds = df[self.categorical].values
         # self.moleculename is used by SecondaryDS in the SuperSet class
-        self.moleculename = df['molecule_name'].str.slice(start=-6).astype('int64').values
+        moleculename = df['molecule_name'].str.slice(start=-6).astype('int64').values
        
         if use_h5:
             print('creating Champs h5 dataset...')
@@ -459,12 +459,14 @@ class Champs(QDataset):
                 cat_ds = h5p.create_dataset('x_cat', data=cat_ds, chunks=True)[()]  # index in with empty tuple [()]
             with h5py.File(in_dir+'champs_con.h5', 'w') as h5p:
                 con_ds = h5p.create_dataset('x_con', data=con_ds, chunks=True)[()]
-            with h5py.File(in_dir+'champs_molecule_name.h5', 'w') as h5p:
-                self.moleculename = h5p.create_dataset('molecule_name', data=self.moleculename, chunks=True)[()]
             with h5py.File(in_dir+'champs_target.h5', 'w') as h5p:
                 target_ds = h5p.create_dataset('target', data=target_ds, chunks=True)[()]
-        
-        return con_ds, cat_ds, target_ds
+            with h5py.File(in_dir+'champs_molecule_name.h5', 'w') as h5p:
+                self.moleculename = h5p.create_dataset('molecule_name', data=moleculename, chunks=True)[()]
+        else: 
+            self.moleculename = moleculename
+       
+        return con_ds, cat_ds, np.reshape(target_ds, (-1, 1))
 
     @classmethod
     def inspect_csv(cls, in_dir='./data/'): 
