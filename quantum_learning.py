@@ -85,8 +85,8 @@ class Learn():
     def run(self, flag): 
         dataloader = DataLoader(self.ds, batch_size=self.bs, shuffle=False, 
                                 sampler=self.sampler(flag=flag), batch_sampler=None, 
-                                num_workers=12, collate_fn=None, pin_memory=True, 
-                                drop_last=True, timeout=0, worker_init_fn=None)
+                                num_workers=8, collate_fn=None, pin_memory=True, 
+                                drop_last=False, timeout=0, worker_init_fn=None)
         
         e_loss, i, predictions = 0, 0, []
         
@@ -129,6 +129,7 @@ class Learn():
             predictions = np.reshape(predictions, (-1, 2))
             self.predictions = pd.DataFrame(predictions, columns=['id','scalar_coupling_constant'])
             self.predictions['id'] = self.predictions['id'].astype('int64')
+            print('print', self.predictions.shape)
             self.predictions.to_csv('quantum_inference.csv', header=True, index=False)
             print('inference complete and saved to csv...')
 
