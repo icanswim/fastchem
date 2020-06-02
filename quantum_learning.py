@@ -83,40 +83,39 @@ class Learn():
         print('learning time: {}'.format(elapsed))
         
     def run(self, flag): 
+        
+        e_loss, i, predictions = 0, 0, []
+        
+        self.model.training = True
+        if flag != 'train': self.model.training = False
+        
         dataloader = DataLoader(self.ds, batch_size=self.bs, shuffle=False, 
                                 sampler=self.sampler(flag=flag), batch_sampler=None, 
                                 num_workers=8, collate_fn=None, pin_memory=True, 
                                 drop_last=False, timeout=0, worker_init_fn=None)
-        
-        e_loss, i, predictions = 0, 0, []
-        
-        def to_cuda(ds):
-            if len(ds) == 0: return []
-            else: return ds.to('cuda:0', non_blocking=True)
+  
+        def to_cuda(data):
+            if len(data) == 0: return []
+            else: return data.to('cuda:0', non_blocking=True)
      
         for x_con, x_cat, y in dataloader:
             i += self.bs
             x_con = to_cuda(x_con)
             x_cat = to_cuda(x_cat)
-            y = to_cuda(y)
-            
-            self.model.training = True
-            if flag != 'train': self.model.training = False
-                
             y_pred = self.model(x_con, x_cat)
             
             if flag == 'infer':
-                y = np.reshape(y.data.to('cpu').numpy(), (-1, 1)) # y = 'id'
+                y = np.reshape(y, (-1, 1)) # y = 'id'
                 y_pred = np.reshape(y_pred.data.to('cpu').numpy(), (-1, 1))
                 predictions.append(np.concatenate((y, y_pred), axis = 1)) 
             else:
+                y = to_cuda(y)           
                 b_loss = self.criterion(y_pred, y)
                 e_loss += b_loss.item()
-                
-            if flag == 'train':
-                self.opt.zero_grad()
-                b_loss.backward()
-                self.opt.step()
+                if flag == 'train':
+                    self.opt.zero_grad()
+                    b_loss.backward()
+                    self.opt.step()
 
         if flag == 'train': self.train_log.append(e_loss/i)
         if flag == 'val': self.val_log.append(e_loss/i)
