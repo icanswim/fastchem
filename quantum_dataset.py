@@ -360,14 +360,14 @@ class Champs(QDataset):
     """https://www.kaggle.com/c/champs-scalar-coupling
     85003 molecules, 1533536 atoms, 4658146 couplings, 2505542 test couplings
     
-    potential_energy.csv ['molecule_name', 'potential_energy'] 
-    scalar_coupling_contributions.csv ['molecule_name', 'atom_index_0', 'atom_index_1', 'type', 'fc', 'sd', 'pso', 'dso'] 
-    train.csv ['id', 'molecule_name', 'atom_index_0', 'atom_index_1', 'type', 'scalar_coupling_constant'] 
-    dipole_moments.csv ['molecule_name', 'X', 'Y', 'Z'] 
-    mulliken_charges.csv ['molecule_name', 'atom_index', 'mulliken_charge'] 
-    sample_submission.csv ['id', 'scalar_coupling_constant'] 
-    structures.csv ['molecule_name', 'atom_index', 'atom', 'x', 'y', 'z'] 
-    test.csv ['id', 'molecule_name', 'atom_index_0', 'atom_index_1', 'type'] n=2505542
+    potential_energy.csv ['molecule_name','potential_energy'] 
+    scalar_coupling_contributions.csv ['molecule_name','atom_index_0','atom_index_1','type','fc','sd','pso','dso'] 
+    train.csv ['id','molecule_name','atom_index_0','atom_index_1','type','scalar_coupling_constant'] 
+    dipole_moments.csv ['molecule_name','X','Y','Z'] 
+    mulliken_charges.csv ['molecule_name','atom_index','mulliken_charge'] 
+    sample_submission.csv ['id','scalar_coupling_constant'] 
+    structures.csv ['molecule_name','atom_index','atom','x','y','z'] 
+    test.csv ['id', 'molecule_name','atom_index_0','atom_index_1','type'] n=2505542
 
     #TODO atom_idx vs coulomb idx significance?
     """
@@ -380,7 +380,7 @@ class Champs(QDataset):
     def __init__(self, in_dir='./data/champs/', n=4658147, features=[], use_h5=True, infer=False):
         self.in_dir = in_dir
         self.len = n 
-        self.embeddings = [(32,32,False),(32,32,False),(8,64,True),(5,32,True),(5,32,True)]  
+        self.embeddings = [(8,64,True),(32,32,False),(5,32,True),(32,32,False),(5,32,True)]  
         self.con_ds, self.cat_ds, self.target_ds = self.load_data(self.in_dir, features,
                                                                   use_h5, infer)
         self.ds_idx = list(range(len(self.target_ds)))
@@ -401,57 +401,50 @@ class Champs(QDataset):
         return self.len
     
     def load_data(self, in_dir, features, use_h5, infer):
-        
-        self.categorical = ['atom_index_0','atom_index_1','type', 'atom_x', 'atom_y']
-        self.continuous = ['mulliken_charge_x','mulliken_charge_y','potential_energy',
-                           'x_x', 'y_x', 'z_x', 'x_y', 'y_y', 'z_y']
-        self.target = ['scalar_coupling_constant']
-        
+        # TODO feature selection
         if infer:
-            self.continuous = ['x_x', 'y_x', 'z_x', 'x_y', 'y_y', 'z_y']
-            df = pd.read_csv(in_dir+'test.csv', header=0, names=['id', 'molecule_name', 
-                   'atom_index_0', 'atom_index_1', 'type'], index_col=False)
-            target_ds = df['id'].values
+            df = pd.read_csv(in_dir+'test.csv', header=0, names=['id','molecule_name', 
+                   'atom_index_0','atom_index_1','type'], index_col=False)
+            target_ds = df.pop('id').values.astype('int64')
         else:
-            self.continuous = ['x_x', 'y_x', 'z_x', 'x_y', 'y_y', 'z_y'] + features
             df = pd.read_csv(in_dir+'train.csv', header=0, names=['id','molecule_name', 
                  'atom_index_0','atom_index_1','type','scalar_coupling_constant'], index_col=False)
-            target_ds = df['scalar_coupling_constant'].values.astype('float32')
-          
-        pe = pd.read_csv(in_dir+'potential_energy.csv', header=0, names=[u'molecule_name',
-                                             'potential_energy'], index_col=False)
+            target_ds = df.pop('scalar_coupling_constant').values.astype('float32')
+#             pe = pd.read_csv(in_dir+'potential_energy.csv', header=0, names=['molecule_name',
+#                                                  'potential_energy'], index_col=False)
+#             mulliken = pd.read_csv(in_dir+'mulliken_charges.csv', header=0, names=['molecule_name',
+#                                'atom_index','mulliken_charge'], index_col=False)
+            
         structures = pd.read_csv(in_dir+'structures.csv', header=0, names=['molecule_name',
-                             'atom_index', 'atom', 'x', 'y', 'z'], index_col=False)
-        mulliken = pd.read_csv(in_dir+'mulliken_charges.csv', header=0, names=['molecule_name',
-                               'atom_index', 'mulliken_charge'], index_col=False)
-
-        df = df.merge(mulliken, how='left', left_on=['molecule_name', 'atom_index_0'], 
-                                            right_on=['molecule_name', 'atom_index'])
-        df = df.merge(structures, how='left', left_on=['molecule_name', 'atom_index_0'], 
-                                              right_on=['molecule_name', 'atom_index'])
-
-        df = df.merge(mulliken, how='left', left_on=['molecule_name', 'atom_index_1'], 
-                                            right_on=['molecule_name', 'atom_index'])
-        df = df.merge(structures, how='left', left_on=['molecule_name', 'atom_index_1'], 
-                                              right_on=['molecule_name', 'atom_index'])
-
-        df = df.merge(pe, how='left', left_on=['molecule_name'], right_on=['molecule_name'])
-
-        df = df.drop(columns=['atom_index_x','atom_index_y']) 
-
-        df[self.categorical] = df[self.categorical].astype('category')
-        df[self.categorical] = df[self.categorical].apply(lambda x: x.cat.codes)
-        df[self.categorical] = df[self.categorical].astype('int64')
-        df[self.continuous] = df[self.continuous].astype('float32')
+                             'atom_index','atom','x','y','z'], index_col=False)
         
-        df = df[['id','molecule_name','type',u'atom_index_0',u'atom_index_1',
-                 'atom_x','atom_y','mulliken_charge_x','mulliken_charge_y',
-                 'potential_energy','x_x','y_x','z_x','x_y','y_y','z_y']]
+        df = df.merge(structures, how='left', left_on=['molecule_name','atom_index_0'],
+                                              right_on=['molecule_name','atom_index'],
+                                              suffixes=('_0','_1'))
+        df = df.merge(structures, how='left', left_on=['molecule_name','atom_index_1'],
+                                              right_on=['molecule_name','atom_index'],
+                                              suffixes=('_0','_1'))
         
-        con_ds = df[self.continuous].values
-        cat_ds = df[self.categorical].values
-        # self.moleculename is used by SecondaryDS in the SuperSet class
-        moleculename = df['molecule_name'].str.slice(start=-6).astype('int64').values
+        df.columns = ['id', 'molecule_name','atom_index_0_drop','atom_index_1_drop','type',
+                      'atom_index_0','atom_0','x_0','y_0','z_0','atom_index_1','atom_1',
+                      'x_1','y_1','z_1']
+        
+        categorical = ['type','atom_index_0','atom_0','atom_index_1','atom_1']
+        continuous = ['x_0','y_0','z_0','x_1','y_1','z_1']
+        
+        df = df.drop(columns=['atom_index_0_drop','atom_index_1_drop'])
+        
+        df[categorical] = df[categorical].astype('category')
+#         df[categorical] = df[categorical].apply(lambda x: x.cat.codes)
+#         df[categorical] = df[categorical].astype('int64')
+        df[continuous] = df[continuous].astype('float32')
+        
+        self.df = df
+        
+        con_ds = df[continuous].values
+        cat_ds = df[categorical].values
+       
+        moleculename = df.pop('molecule_name').str.slice(start=-6).astype('int64').values
        
         if use_h5:
             print('creating Champs h5 dataset...')
