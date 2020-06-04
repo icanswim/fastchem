@@ -380,7 +380,7 @@ class Champs(QDataset):
     def __init__(self, in_dir='./data/champs/', n=4658147, features=[], use_h5=True, infer=False):
         self.in_dir = in_dir
         self.len = n 
-        self.embeddings = [(8,64,True),(32,32,False),(5,32,True),(32,32,False),(5,32,True)]  
+        self.embeddings = [(8,64,True),(32,32,False),(4,32,True),(32,32,False),(4,32,True)]  
         self.con_ds, self.cat_ds, self.target_ds = self.load_data(self.in_dir, features,
                                                                   use_h5, infer)
         self.ds_idx = list(range(len(self.target_ds)))
@@ -400,16 +400,18 @@ class Champs(QDataset):
     def __len__(self):
         return self.len
     
-    def load_data(self, in_dir, features, use_h5, infer):
-        # TODO feature selection
+    def load_data(self, in_dir, features, use_h5, infer, rev_con=True):
+
         if infer:
             df = pd.read_csv(in_dir+'test.csv', header=0, names=['id','molecule_name', 
                    'atom_index_0','atom_index_1','type'], index_col=False)
-            target_ds = df.pop('id').values.astype('int64')
+            target_ds = df['id'].values.astype('int64')
+            
         else:
             df = pd.read_csv(in_dir+'train.csv', header=0, names=['id','molecule_name', 
                  'atom_index_0','atom_index_1','type','scalar_coupling_constant'], index_col=False)
             target_ds = df.pop('scalar_coupling_constant').values.astype('float32')
+            
 #             pe = pd.read_csv(in_dir+'potential_energy.csv', header=0, names=['molecule_name',
 #                                                  'potential_energy'], index_col=False)
 #             mulliken = pd.read_csv(in_dir+'mulliken_charges.csv', header=0, names=['molecule_name',
@@ -417,35 +419,48 @@ class Champs(QDataset):
             
         structures = pd.read_csv(in_dir+'structures.csv', header=0, names=['molecule_name',
                              'atom_index','atom','x','y','z'], index_col=False)
-        
         df = df.merge(structures, how='left', left_on=['molecule_name','atom_index_0'],
                                               right_on=['molecule_name','atom_index'],
                                               suffixes=('_0','_1'))
         df = df.merge(structures, how='left', left_on=['molecule_name','atom_index_1'],
                                               right_on=['molecule_name','atom_index'],
                                               suffixes=('_0','_1'))
-        
+
         df.columns = ['id', 'molecule_name','atom_index_0_drop','atom_index_1_drop','type',
                       'atom_index_0','atom_0','x_0','y_0','z_0','atom_index_1','atom_1',
                       'x_1','y_1','z_1']
-        
+
+        df = df.drop(columns=['atom_index_0_drop','atom_index_1_drop'])
+
+        df = df[['id','molecule_name','type','atom_index_0','atom_0','x_0','y_0','z_0',
+                 'atom_index_1','atom_1','x_1','y_1','z_1']]
+
+        if not infer:
+            df = pd.concat([df, target_ds], axis=1)        
+            # create reverse connections           
+            rev = df.copy()
+            rev.columns = ['id', 'molecule_name','type','atom_index_1','atom_1',
+                           'x_1','y_1','z_1','atom_index_0','atom_0','x_0','y_0',
+                           'z_0','scalar_coupling_constant']
+            rev = rev[['id','molecule_name','type', 'atom_index_0','atom_0','x_0','y_0',
+                       'z_0','atom_index_1','atom_1','x_1','y_1','z_1',
+                       'scalar_coupling_constant']]
+            df = pd.concat([df, rev])
+            target_ds = df.pop('scalar_coupling_constant').values.astype('float32')
+            
         categorical = ['type','atom_index_0','atom_0','atom_index_1','atom_1']
         continuous = ['x_0','y_0','z_0','x_1','y_1','z_1']
         
-        df = df.drop(columns=['atom_index_0_drop','atom_index_1_drop'])
-        
         df[categorical] = df[categorical].astype('category')
-#         df[categorical] = df[categorical].apply(lambda x: x.cat.codes)
-#         df[categorical] = df[categorical].astype('int64')
+        df[categorical] = df[categorical].apply(lambda x: x.cat.codes)
+        df[categorical] = df[categorical].astype('int64')
         df[continuous] = df[continuous].astype('float32')
-        
-        self.df = df
-        
+
         con_ds = df[continuous].values
         cat_ds = df[categorical].values
-       
+          
         moleculename = df.pop('molecule_name').str.slice(start=-6).astype('int64').values
-       
+        
         if use_h5:
             print('creating Champs h5 dataset...')
             with h5py.File(in_dir+'champs_cat.h5', 'w') as h5p:
@@ -460,6 +475,7 @@ class Champs(QDataset):
             self.moleculename = moleculename
        
         return con_ds, cat_ds, np.reshape(target_ds, (-1, 1))
+
 
     @classmethod
     def inspect_csv(cls, in_dir='./data/'): 
