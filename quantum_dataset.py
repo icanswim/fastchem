@@ -377,9 +377,8 @@ class Champs(QDataset):
     types = ['1JHC', '2JHH', '1JHN', '2JHN', '2JHC', '3JHH', '3JHC', '3JHN']
     atomic_n = {'C': 6, 'H': 1, 'N': 7, 'O': 8, 'F': 9}
     
-    def __init__(self, in_dir='./data/champs/', n=4658147, features=[], use_h5=True, infer=False):
+    def __init__(self, in_dir='./data/champs/', n=4658147, features=[], use_h5=False, infer=False):
         self.in_dir = in_dir
-        self.len = n 
         self.embeddings = [(8,64,True),(32,32,False),(4,32,True),(32,32,False),(4,32,True)]  
         self.con_ds, self.cat_ds, self.target_ds = self.load_data(self.in_dir, features,
                                                                   use_h5, infer)
@@ -398,9 +397,9 @@ class Champs(QDataset):
         return x_con, x_cat, y
     
     def __len__(self):
-        return self.len
+        return len(self.ds_idx)
     
-    def load_data(self, in_dir, features, use_h5, infer, rev_con=True):
+    def load_data(self, in_dir, features, use_h5, infer):
 
         if infer:
             df = pd.read_csv(in_dir+'test.csv', header=0, names=['id','molecule_name', 
@@ -410,7 +409,7 @@ class Champs(QDataset):
         else:
             df = pd.read_csv(in_dir+'train.csv', header=0, names=['id','molecule_name', 
                  'atom_index_0','atom_index_1','type','scalar_coupling_constant'], index_col=False)
-            target_ds = df.pop('scalar_coupling_constant').values.astype('float32')
+            target_ds = df.pop('scalar_coupling_constant').astype('float32')
             
 #             pe = pd.read_csv(in_dir+'potential_energy.csv', header=0, names=['molecule_name',
 #                                                  'potential_energy'], index_col=False)
@@ -442,12 +441,13 @@ class Champs(QDataset):
             rev.columns = ['id', 'molecule_name','type','atom_index_1','atom_1',
                            'x_1','y_1','z_1','atom_index_0','atom_0','x_0','y_0',
                            'z_0','scalar_coupling_constant']
-            rev = rev[['id','molecule_name','type', 'atom_index_0','atom_0','x_0','y_0',
-                       'z_0','atom_index_1','atom_1','x_1','y_1','z_1',
+            rev = rev[['id','molecule_name','type', 'atom_index_0','atom_0','x_0',
+                       'y_0','z_0','atom_index_1','atom_1','x_1','y_1','z_1',
                        'scalar_coupling_constant']]
+         
             df = pd.concat([df, rev])
             target_ds = df.pop('scalar_coupling_constant').values.astype('float32')
-            
+           
         categorical = ['type','atom_index_0','atom_0','atom_index_1','atom_1']
         continuous = ['x_0','y_0','z_0','x_1','y_1','z_1']
         
@@ -473,7 +473,7 @@ class Champs(QDataset):
                 self.moleculename = h5p.create_dataset('molecule_name', data=moleculename, chunks=True)[()]
         else: 
             self.moleculename = moleculename
-       
+
         return con_ds, cat_ds, np.reshape(target_ds, (-1, 1))
 
 
