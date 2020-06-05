@@ -140,7 +140,7 @@ class Learn():
                                          
 class Selector(Sampler):
    
-    def __init__(self, dataset_idx, splits=(.1,.8)):
+    def __init__(self, dataset_idx, splits=(.2,.6)):
         self.dataset_idx = dataset_idx
         self.splits = splits # (n test/n total, n train/n total), remainder = validation ratio (bootstrapped)
         self.test_idx = random.sample(self.dataset_idx, int(len(self.dataset_idx)*splits[0]))

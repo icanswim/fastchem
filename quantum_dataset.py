@@ -264,6 +264,8 @@ class QM9(QDataset):
     
     https://arxiv.org/abs/1908.00971
     Physical machine learning outperforms "human learning" in Quantum Chemistry
+    
+    TODO mulliken charges
     """
     LOW_CONVERGENCE = [21725,87037,59827,117523,128113,129053,129152, 
                        129158,130535,6620,59818]
@@ -369,7 +371,8 @@ class Champs(QDataset):
     structures.csv ['molecule_name','atom_index','atom','x','y','z'] 
     test.csv ['id', 'molecule_name','atom_index_0','atom_index_1','type'] n=2505542
 
-    #TODO atom_idx vs coulomb idx significance?
+    TODO atom_idx vs coulomb idx significance
+    TODO make forward as well as reverse connections selected for test set (use id)
     """
     files = ['magnetic_shielding_tensors.csv', 'potential_energy.csv', 
              'scalar_coupling_contributions.csv', 'train.csv', 'dipole_moments.csv', 

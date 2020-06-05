@@ -43,6 +43,8 @@ class FFNet(nn.Module):
         return ffu
  
     def forward(self, x_con, x_cat):
+        # check for categorical and/or continuous inputs, get the embeddings and  
+        # concat as appropriate, feed to model
         if len(x_cat) != 0:
             emb = []
             for i in range(x_cat.shape[1]):
@@ -61,6 +63,7 @@ class FFNet(nn.Module):
         return x
     
     def adapt(self, shape):
+        # for adapting a dataset (shape[0]) to a saved model and weights (shape[1])
         # freeze the layers
         for param in self.parameters(): 
             param.requires_grad = False
