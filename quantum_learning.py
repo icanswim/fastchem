@@ -49,7 +49,7 @@ class Learn():
         self.model = model.to('cuda:0')
         logging.info(self.model.children)
         
-        self.sampler = Sampler(self.ds.ds_idx)
+        self.sampler = Sampler(self.ds)
         
         if Criterion:
             self.criterion = Criterion(**crit_params).to('cuda:0')
@@ -140,10 +140,10 @@ class Learn():
                                          
 class Selector(Sampler):
    
-    def __init__(self, dataset_idx, splits=(.2,.6)):
-        self.dataset_idx = dataset_idx
-        self.splits = splits # (n test/n total, n train/n total), remainder = validation ratio (bootstrapped)
-        self.test_idx = random.sample(self.dataset_idx, int(len(self.dataset_idx)*splits[0]))
+    def __init__(self, dataset, split=.1):
+        self.dataset_idx = dataset.ds_idx
+        self.split = split 
+        self.test_idx = random.sample(self.dataset_idx, int(len(self.dataset_idx)*self.split))
         self.sample_train_val_idx()
 
     def __iter__(self):
@@ -172,7 +172,38 @@ class Selector(Sampler):
     
     def sample_train_val_idx(self):
         train_val_idx = [i for i in self.dataset_idx if i != self.test_idx]
-        self.train_idx = random.sample(train_val_idx, int(len(self.dataset_idx)*self.splits[1]))
-        self.val_idx = [i for i in train_val_idx if i != self.train_idx]
+        self.val_idx = random.sample(train_val_idx, int(len(train_val_idx)*self.split))
+        self.train_idx = [i for i in train_val_idx if i != self.val_idx]
         
+class ChampSelector(Selector):
+    """This class is for use with the Champs dataset.  If the Champs dataset has been created as an 
+    undirected graph with connections (scc) pointing in both directions (if atom_idx_0 points to atom_idx_1
+    then atom_idx_1 also points atom_idx_0) then when selecting the test hold out set both directions 
+    need to be selected inorder to prevent a data leak.
+    """
+    def __init__(self, dataset, split=.1):
+        self.dataset_idx = dataset.ds_idx
+        self.splits = split
+        self.test_idx = random.sample(self.dataset_idx, int(len(self.dataset_idx)*split))
+        # lookup the reverse connection and add it to the list
+        test_index = self.test_idx.copy()
+        for i in test_index:
+            eyedee = dataset.lookup['id'][i]
+            indexes = dataset.lookup.index[lookup['id'][eyedee]]
+            _i = [x for x in indexes if != i] # i is already in the list
+            self.test_idx.append(_i)
+                
+        self.sample_train_val_idx()
         
+    def sample_train_val_idx(self):
+        train_val_idx = [i for i in self.dataset_idx if i != self.test_idx]
+        self.val_idx = random.sample(train_val_idx, int(len(train_val_idx)*self.split))
+        val_index = self.val_idx.copy()
+        for i in val_index:
+            eyedee = dataset.lookup['id'][i]
+            indexes = dataset.lookup.index[lookup['id'][eyedee]]
+            _i = [x for x in indexes if x != i]
+            self.val_idx.append(_i)
+            
+        self.train_idx = [i for i in train_val_idx if i != self.val_idx]
+  

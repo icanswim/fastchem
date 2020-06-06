@@ -462,7 +462,9 @@ class Champs(QDataset):
         con_ds = df[continuous].values
         cat_ds = df[categorical].values
           
-        moleculename = df.pop('molecule_name').str.slice(start=-6).astype('int64').values
+        moleculename = df.pop('molecule_name').str.slice(start=-6).astype('int64')
+        eyedee = df.pop('id').astype('int64')
+        lookup = pd.concat([moleculename, eyedee], axis=1)
         
         if use_h5:
             print('creating Champs h5 dataset...')
@@ -472,10 +474,10 @@ class Champs(QDataset):
                 con_ds = h5p.create_dataset('x_con', data=con_ds, chunks=True)[()]
             with h5py.File(in_dir+'champs_target.h5', 'w') as h5p:
                 target_ds = h5p.create_dataset('target', data=target_ds, chunks=True)[()]
-            with h5py.File(in_dir+'champs_molecule_name.h5', 'w') as h5p:
-                self.moleculename = h5p.create_dataset('molecule_name', data=moleculename, chunks=True)[()]
+            with h5py.File(in_dir+'champs_lookup.h5', 'w') as h5p:
+                self.lookup = h5p.create_dataset('lookup', data=lookup, chunks=True)[()]
         else: 
-            self.moleculename = moleculename
+            self.lookup = lookup
 
         return con_ds, cat_ds, np.reshape(target_ds, (-1, 1))
 
@@ -506,7 +508,7 @@ class SuperSet(QDataset):
         
     def __getitem__(self, i):
         x_con1, x_cat1, y1 = self.pds[i]
-        x_con2, x_cat2, y2 = self.sds[self.pds.moleculename[i]]
+        x_con2, x_cat2, y2 = self.sds[self.pds.lookup['moleculename'].iloc[i]]
        
         def concat(in1, in2, dim=0):
             try:
