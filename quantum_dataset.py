@@ -447,7 +447,6 @@ class Champs(QDataset):
             rev = rev[['id','molecule_name','type', 'atom_index_0','atom_0','x_0',
                        'y_0','z_0','atom_index_1','atom_1','x_1','y_1','z_1',
                        'scalar_coupling_constant']]
-         
             df = pd.concat([df, rev])
             target_ds = df.pop('scalar_coupling_constant').values.astype('float32')
            
@@ -505,8 +504,10 @@ class SuperSet(QDataset):
         self.ds_idx = self.pds.ds_idx 
         
     def __getitem__(self, i):
+        # lookup the molecule name used by the primary ds and use it to select data from 
+        # the secondary ds and then concatenate both outputs and return it
         x_con1, x_cat1, y1 = self.pds[i]
-        x_con2, x_cat2, y2 = self.sds[self.pds.lookup['moleculename'].iloc[i]]
+        x_con2, x_cat2, y2 = self.sds[self.pds.lookup[i]]  
        
         def concat(in1, in2, dim=0):
             try:

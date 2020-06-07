@@ -182,10 +182,11 @@ class ChampSelector(Selector):
     need to be selected inorder to prevent a data leak.
     """
     def __init__(self, dataset_idx, split=.1):
+        self.split = split
+        self.dataset_idx = dataset_idx
         half = int(len(dataset_idx)//2)
-        self.dataset_idx = dataset_idx[:half]
-        self.split = split  
-        self.test_idx = random.sample(self.dataset_idx, int(len(self.dataset_idx)*self.split))
+        first = self.dataset_idx[:half]
+        self.test_idx = random.sample(first, int(len(first)*self.split))
         test_index = self.test_idx.copy()
         for i in test_index:
             self.test_idx.append(i+4658146)
