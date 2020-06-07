@@ -140,9 +140,12 @@ class Learn():
                                          
 class Selector(Sampler):
    
-    def __init__(self, dataset_idx, split=.1):
-        self.dataset_idx = dataset_idx
+    def __init__(self, dataset_idx, split=.1, subset=False):
         self.split = split 
+        if subset:
+            self.dataset_idx = random.sample(dataset_idx, int(len(dataset_idx)*subset))
+        else:    
+            self.dataset_idx = dataset_idx
         self.test_idx = random.sample(self.dataset_idx, int(len(self.dataset_idx)*self.split))
         self.sample_train_val_idx()
 
@@ -172,24 +175,45 @@ class Selector(Sampler):
     
     def sample_train_val_idx(self):
         train_val_idx = [i for i in self.dataset_idx if i != self.test_idx]
-        self.val_idx = random.sample(train_val_idx, int(len(train_val_idx)*self.split))
-        self.train_idx = [i for i in train_val_idx if i != self.val_idx]
+        self.train_idx = random.sample(train_val_idx, int(len(train_val_idx)*(1-self.split)))
+        self.val_idx = [i for i in train_val_idx if i != self.train_idx]
         
 class ChampSelector(Selector):
     """This class is for use with the Champs dataset.  If the Champs dataset has been created as an 
     undirected graph with connections (scc) pointing in both directions (if atom_idx_0 points to atom_idx_1
     then atom_idx_1 also points atom_idx_0) then when selecting the test hold out set both directions 
     need to be selected inorder to prevent a data leak.
+    TODO train a model on only one direction and test on the opposite
     """
-    def __init__(self, dataset_idx, split=.1):
+    def __init__(self, dataset_idx, split=.1, subset=.1):
         self.split = split
-        self.dataset_idx = dataset_idx
-        half = int(len(dataset_idx)//2)
-        first = self.dataset_idx[:half]
-        self.test_idx = random.sample(first, int(len(first)*self.split))
+        self.half = int(len(dataset_idx)//2) # 4658146
+        print('half', self.half)
+        first = dataset_idx[:self.half] # only sample from the first half; second half is the reverse connections
+        
+        if subset:
+            self.dataset_idx = random.sample(first, int(len(first)*subset)) 
+        else:    
+            self.dataset_idx = first
+            
+        # add the reverse connections; dont iter and append the same list
+        self.test_idx = random.sample(self.dataset_idx, int(len(self.dataset_idx)*self.split))
         test_index = self.test_idx.copy()
         for i in test_index:
-            self.test_idx.append(i+4658146)
+            self.test_idx.append(i+self.half)
             
         self.sample_train_val_idx()
- 
+            
+    def sample_train_val_idx(self):
+        train_val_idx = [i for i in self.dataset_idx if i != self.test_idx]
+        self.train_idx = random.sample(train_val_idx, int(len(train_val_idx)*(1-self.split)))
+        train_index = self.train_idx.copy()
+        for i in self.train_index:
+            self.train_idx.append(i+self.half)
+        self.val_idx = [i for i in train_val_idx if i != self.train_idx]
+        val_index = self.val_id.copy()
+        for i in val_index:
+            self.val_idx.append(i+self.half)
+        
+        
+        
