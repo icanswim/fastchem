@@ -462,10 +462,8 @@ class Champs(QDataset):
         con_ds = df[continuous].values
         cat_ds = df[categorical].values
           
-        moleculename = df.pop('molecule_name').str.slice(start=-6).astype('int64')
-        eyedee = df.pop('id').astype('int64')
-        lookup = pd.concat([moleculename, eyedee], axis=1)
-        
+        lookup = df.pop('molecule_name').str.slice(start=-6).astype('int64')
+       
         if use_h5:
             print('creating Champs h5 dataset...')
             with h5py.File(in_dir+'champs_cat.h5', 'w') as h5p:
