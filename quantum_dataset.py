@@ -507,7 +507,7 @@ class SuperSet(QDataset):
         # lookup the molecule name used by the primary ds and use it to select data from 
         # the secondary ds and then concatenate both outputs and return it
         x_con1, x_cat1, y1 = self.pds[i]
-        x_con2, x_cat2, y2 = self.sds[self.pds.lookup[i]]  
+        x_con2, x_cat2, y2 = self.sds[self.pds.lookup.iloc[i]]  
        
         def concat(in1, in2, dim=0):
             try:

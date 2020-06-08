@@ -187,8 +187,7 @@ class ChampSelector(Selector):
     """
     def __init__(self, dataset_idx, split=.1, subset=.1):
         self.split = split
-        self.half = int(len(dataset_idx)//2) # 4658146
-        print('half', self.half)
+        self.half = int(len(dataset_idx)//2) - 1# 4658146
         first = dataset_idx[:self.half] # only sample from the first half; second half is the reverse connections
         
         if subset:
@@ -196,7 +195,7 @@ class ChampSelector(Selector):
         else:    
             self.dataset_idx = first
             
-        # add the reverse connections; dont iter and append the same list
+        # add the reverse connections
         self.test_idx = random.sample(self.dataset_idx, int(len(self.dataset_idx)*self.split))
         test_index = self.test_idx.copy()
         for i in test_index:
@@ -208,10 +207,10 @@ class ChampSelector(Selector):
         train_val_idx = [i for i in self.dataset_idx if i != self.test_idx]
         self.train_idx = random.sample(train_val_idx, int(len(train_val_idx)*(1-self.split)))
         train_index = self.train_idx.copy()
-        for i in self.train_index:
+        for i in train_index:
             self.train_idx.append(i+self.half)
         self.val_idx = [i for i in train_val_idx if i != self.train_idx]
-        val_index = self.val_id.copy()
+        val_index = self.val_idx.copy()
         for i in val_index:
             self.val_idx.append(i+self.half)
         
