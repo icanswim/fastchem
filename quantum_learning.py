@@ -15,9 +15,8 @@ import matplotlib.pyplot as plt
 class Learn():
     
     def __init__(self, Dataset, Model, Sampler, Optimizer=None, Criterion=None, 
-                 model_params={}, ds_params={}, opt_params={}, crit_params={}, 
-                 batch_size=1, epochs=1, save_model=False, load_model=False, 
-                 adapt=False):
+                 model_params={}, ds_params={}, opt_params={}, crit_params={},sample_params={},
+                 batch_size=1, epochs=1, save_model=False, load_model=False, adapt=False):
         """
         save_model = True/False
         load_model = False/'./models/savedmodel.pth'
@@ -49,7 +48,7 @@ class Learn():
         self.model = model.to('cuda:0')
         logging.info(self.model.children)
         
-        self.sampler = Sampler(self.ds.ds_idx)
+        self.sampler = Sampler(self.ds.ds_idx, **sample_params)
         
         if Criterion:
             self.criterion = Criterion(**crit_params).to('cuda:0')
@@ -139,6 +138,9 @@ class Learn():
 
                                          
 class Selector(Sampler):
+    """A base class for subset selection for creating train, validation and test sets.
+    It is also possible to do filtering here or at the quantum_dataset level.
+    """
    
     def __init__(self, dataset_idx, split=.1, subset=False):
         self.split = split 
@@ -187,30 +189,32 @@ class ChampSelector(Selector):
     """
     def __init__(self, dataset_idx, split=.1, subset=.1):
         self.split = split
-        self.half = int(len(dataset_idx)//2) - 1 # 4658146
-        first = dataset_idx[:self.half] # only sample from the first half; second half is the reverse connections
-        
+        self.half = int(len(dataset_idx)/2) # 4658147
+        first = dataset_idx[:self.half+1] # only sample from the first half; second half is the reverse connections
+
         if subset:
-            self.dataset_idx = random.sample(first, int(len(first)*subset)) 
+            self.dataset_idx = random.sample(first, int(len(first)*subset)+1) 
         else:    
             self.dataset_idx = first
             
-        self.test_idx = random.sample(self.dataset_idx, int(len(self.dataset_idx)*self.split))
+        self.test_idx = random.sample(self.dataset_idx, int(len(self.dataset_idx)*self.split)+1)
         # add the reverse connections
         test_index = self.test_idx.copy()
         for i in test_index:
             self.test_idx.append(i+self.half)
         random.shuffle(self.test_idx)
-            
+  
         self.sample_train_val_idx()
             
     def sample_train_val_idx(self):
         train_val_idx = [i for i in self.dataset_idx if i != self.test_idx]
-        self.train_idx = random.sample(train_val_idx, int(len(train_val_idx)*(1-self.split)))
+        self.train_idx = random.sample(train_val_idx, int(len(train_val_idx)*(1-self.split)+1))
+
         train_index = self.train_idx.copy()
         for i in train_index:
             self.train_idx.append(i+self.half)
         random.shuffle(self.train_idx)
+        
         self.val_idx = [i for i in train_val_idx if i != self.train_idx]
         val_index = self.val_idx.copy()
         for i in val_index:
