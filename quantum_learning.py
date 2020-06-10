@@ -190,26 +190,24 @@ class ChampSelector(Selector):
     def __init__(self, dataset_idx, split=.1, subset=.1):
         self.split = split
         self.half = int(len(dataset_idx)/2) # 4658147
-        first = dataset_idx[:self.half+1] # only sample from the first half; second half is the reverse connections
+        first = dataset_idx[:self.half] # only sample from the first half; second half is the reverse connections
 
         if subset:
-            self.dataset_idx = random.sample(first, int(len(first)*subset)+1) 
+            self.dataset_idx = random.sample(first, int(len(first)*subset)) 
         else:    
             self.dataset_idx = first
             
-        self.test_idx = random.sample(self.dataset_idx, int(len(self.dataset_idx)*self.split)+1)
+        self.test_idx = random.sample(self.dataset_idx, int(len(self.dataset_idx)*self.split))
         # add the reverse connections
         test_index = self.test_idx.copy()
         for i in test_index:
             self.test_idx.append(i+self.half)
         random.shuffle(self.test_idx)
-  
         self.sample_train_val_idx()
             
     def sample_train_val_idx(self):
         train_val_idx = [i for i in self.dataset_idx if i != self.test_idx]
-        self.train_idx = random.sample(train_val_idx, int(len(train_val_idx)*(1-self.split)+1))
-
+        self.train_idx = random.sample(train_val_idx, int(len(train_val_idx)*(1-self.split)))
         train_index = self.train_idx.copy()
         for i in train_index:
             self.train_idx.append(i+self.half)
@@ -220,6 +218,7 @@ class ChampSelector(Selector):
         for i in val_index:
             self.val_idx.append(i+self.half)
         random.shuffle(self.val_idx)
+
         
         
         
