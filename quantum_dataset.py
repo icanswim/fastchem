@@ -266,7 +266,6 @@ class QM9(QDataset):
     https://arxiv.org/abs/1908.00971
     Physical machine learning outperforms "human learning" in Quantum Chemistry
     
-    TODO mulliken charges
     """
     LOW_CONVERGENCE = [21725,87037,59827,117523,128113,129053,129152, 
                        129158,130535,6620,59818]
@@ -275,8 +274,10 @@ class QM9(QDataset):
                   'gap','r2','zpve','U0','U','H','G','Cv']
     
     def __init__(self, in_dir='./data/qm9/qm9.xyz/', n=133885, 
-                 features=['coulomb'], target='H', dim=29*29, use_pickle=True):
-        """dim = length of longest molecule that all molecules will be padded to"""
+                 features=[], target='', dim=29, use_pickle=True):
+        """dim = length of longest molecule that all molecules will be padded to
+        features/target = QM9.properties, 'coulomb', 'mulliken'
+        """
         self.features, self.target, self.dim = features, target, dim
         self.datadic = self.load_data(in_dir, n, use_pickle)
         # filter here
@@ -339,29 +340,32 @@ class QM9(QDataset):
     def load_mol(self, idx):
         mol = self.datadic[idx]
         
-        def load_feature(fea):
-            if fea in QM9.properties: 
-                return np.reshape(np.asarray(mol.properties[QM9.properties.index(fea)],
-                                                                   dtype=np.float32), -1) 
-            else: return np.reshape(np.asarray(getattr(mol, fea), dtype=np.float32), -1)
-            
-        feats = []
-        for fea in self.features:
+        def load_feature(feature):
             if fea == 'coulomb': 
                 flat = np.reshape(mol.coulomb, -1)
                 padded = np.pad(flat, (0, self.dim**2-len(mol.coulomb)**2))
-                feats.append(padded)
+                return padded
             elif fea == 'mulliken':
-                for line in mol.xyz:
-                    m = np.reshape(np.asarray(np.char.replace(line[4], '*^', 'e'), dtype=np.float32), -1)
-                    feats.append(m)
+                mulliken = []
+                for atom in mol.xyz:
+                    m = np.reshape(np.asarray(np.char.replace(atom[4], '*^', 'e'), 
+                                                                  dtype=np.float32), -1)
+                    mulliken.append(m)
                 pad = self.dim-len(mol.xyz)
-                feats.append(np.zeros((pad,), dtype=np.float32))
+                mulliken.append(np.zeros((pad,), dtype=np.float32))
+                return np.concatenate(mulliken, axis=0)
+            elif fea in QM9.properties: 
+                return np.reshape(np.asarray(mol.properties[QM9.properties.index(fea)],
+                                                                   dtype=np.float32), -1)
             else: 
-                feats.append(load_feature(fea))
+                return np.reshape(np.asarray(getattr(mol, fea), dtype=np.float32), -1)
+                
+        feats = []
+        for fea in self.features:
+            feats.append(load_feature(fea))
        
         x_con = np.concatenate(feats, axis=0)
-        y = np.asarray(load_feature(self.target), dtype=np.float32)
+        y = load_feature(self.target)
         
         return x_con, self.x_cat, y
             
