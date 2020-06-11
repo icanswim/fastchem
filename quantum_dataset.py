@@ -115,6 +115,7 @@ class QM9Mol(Molecule):
         self.xyz = []
         for atom in xyz[2:self.n_atoms+2]:
             self.xyz.append(atom.strip().split('\t')) # [['atom_type',x,y,z,mulliken],...]
+        
 
             
 class QDataset(Dataset, ABC):
@@ -348,9 +349,16 @@ class QM9(QDataset):
         for fea in self.features:
             if fea == 'coulomb': 
                 flat = np.reshape(mol.coulomb, -1)
-                padded = np.pad(flat, (0, self.dim-(len(mol.coulomb)**2)), 'constant')
-                feats.insert(0, padded)
-            else: feats.append(load_feature(fea))
+                padded = np.pad(flat, (0, self.dim**2-len(mol.coulomb)**2))
+                feats.append(padded)
+            elif fea == 'mulliken':
+                for line in mol.xyz:
+                    m = np.reshape(np.asarray(line[4], dtype=np.float32), -1)
+                    feats.append(m)
+                pad = self.dim-len(mol.xyz)
+                feats.append(np.zeros((pad,), dtype=np.float32))
+            else: 
+                feats.append(load_feature(fea))
        
         x_con = np.concatenate(feats, axis=0)
         y = np.asarray(load_feature(self.target), dtype=np.float32)
