@@ -353,7 +353,7 @@ class QM9(QDataset):
                 feats.append(padded)
             elif fea == 'mulliken':
                 for line in mol.xyz:
-                    m = np.reshape(np.asarray(line[4], dtype=np.float32), -1)
+                    m = np.reshape(np.asarray(np.char.replace(line[4], '*^', 'e'), dtype=np.float32), -1)
                     feats.append(m)
                 pad = self.dim-len(mol.xyz)
                 feats.append(np.zeros((pad,), dtype=np.float32))
