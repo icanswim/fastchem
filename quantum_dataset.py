@@ -492,7 +492,6 @@ class Champs(QDataset):
 
         return con_ds, cat_ds, np.reshape(target_ds, (-1, 1))
 
-
     @classmethod
     def inspect_csv(cls, in_dir='./data/'): 
         feature_labels = {}

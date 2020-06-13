@@ -53,6 +53,8 @@ class Learn():
         if Criterion:
             self.criterion = Criterion(**crit_params).to('cuda:0')
             self.opt = Optimizer(self.model.parameters(), **opt_params)
+            logging.info('criterion: {}\n{}'.format(type(self.criterion), crit_params))
+            logging.info('optimizer: {}\n{}'.format(type(self.opt), opt_params))
 
             self.train_log, self.val_log = [], []
             for e in range(epochs):
@@ -122,6 +124,7 @@ class Learn():
             logging.info('test loss: {}'.format(e_loss/i))
             print('test loss: {}'.format(e_loss/i))
         if flag == 'infer': 
+            # TODO abstraction
             logging.info('inference complete')
             predictions = np.concatenate(predictions, axis=0)
             predictions = np.reshape(predictions, (-1, 2))
