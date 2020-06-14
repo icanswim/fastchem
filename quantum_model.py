@@ -52,7 +52,6 @@ class FFNet(nn.Module):
                 emb.append(out)
             emb = cat(emb, dim=1)
             if x_con.shape[1] != 0:
-                print('x_con.shape[1]', x_con.shape[1])
                 x = cat([x_con, emb], dim=1)
             else:  
                 x = emb    
