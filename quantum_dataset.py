@@ -112,9 +112,16 @@ class QM9Mol(Molecule):
         self.smile = xyz[-2]
         self.n_atoms = int(xyz[0])
         self.properties = xyz[1].strip().split('\t')[1:] # [float,...]
+        
         self.xyz = []
         for atom in xyz[2:self.n_atoms+2]:
             self.xyz.append(atom.strip().split('\t')) # [['atom_type',x,y,z,mulliken],...]
+            
+        self.mulliken = []
+        for atom in self.xyz:
+            m = np.reshape(np.asarray(np.char.replace(atom[4], '*^', 'e'), 
+                                                          dtype=np.float32), -1)
+            self.mulliken.append(m)
         
 
             
@@ -276,7 +283,7 @@ class QM9(QDataset):
     def __init__(self, in_dir='./data/qm9/qm9.xyz/', n=133885, 
                  features=[], target='', dim=29, use_pickle=True):
         """dim = length of longest molecule that all molecules will be padded to
-        features/target = QM9.properties, 'coulomb', 'mulliken'
+        features/target = QM9.properties, 'coulomb', 'mulliken', QM9Mol.attr
         """
         self.features, self.target, self.dim = features, target, dim
         self.datadic = self.load_data(in_dir, n, use_pickle)
