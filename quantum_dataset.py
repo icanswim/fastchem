@@ -122,9 +122,8 @@ class QM9Mol(Molecule):
             m = np.reshape(np.asarray(np.char.replace(atom[4], '*^', 'e'), 
                                                           dtype=np.float32), -1)
             self.mulliken.append(m)
+        self.mulliken = np.concatenate(self.mulliken, axis=0)
         
-
-            
 class QDataset(Dataset, ABC):
     """An abstract base class for quantum datasets"""
     @abstractmethod
@@ -350,17 +349,9 @@ class QM9(QDataset):
         def load_feature(feature):
             if fea == 'coulomb': 
                 flat = np.reshape(mol.coulomb, -1)
-                padded = np.pad(flat, (0, self.dim**2-len(mol.coulomb)**2))
-                return padded
+                return np.pad(flat, (0, self.dim**2-len(mol.coulomb)**2))
             elif fea == 'mulliken':
-                mulliken = []
-                for atom in mol.xyz:
-                    m = np.reshape(np.asarray(np.char.replace(atom[4], '*^', 'e'), 
-                                                                  dtype=np.float32), -1)
-                    mulliken.append(m)
-                pad = self.dim-len(mol.xyz)
-                mulliken.append(np.zeros((pad,), dtype=np.float32))
-                return np.concatenate(mulliken, axis=0)
+                return np.pad(mol.mulliken, (0, self.dim-len(mol.mulliken)))
             elif fea in QM9.properties: 
                 return np.reshape(np.asarray(mol.properties[QM9.properties.index(fea)],
                                                                    dtype=np.float32), -1)
