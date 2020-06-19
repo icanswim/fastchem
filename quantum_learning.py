@@ -143,7 +143,7 @@ class Learn():
 class Selector(Sampler):
     """A base class for subset selection for creating train, validation and test sets.
     It is also possible to do filtering here or at the quantum_dataset level.  
-    A hashtable lookup optimization is used for the sampling/selecting the training,
+    A hashtable lookup optimization is used for the sampling/selecting of the training,
     validation and test sets.
     """
    
@@ -187,9 +187,9 @@ class Selector(Sampler):
         
         train_val_idx = [i for i in self.dataset_idx if not self.test_lookup[i]]
         self.val_idx = random.sample(train_val_idx, int(len(train_val_idx)*self.split))
-        self.val_lookup = {i:(True if i in self.val_idx else False) for i in train_val_idx}
+        val_lookup = {i:(True if i in self.val_idx else False) for i in train_val_idx}
         
-        self.train_idx = [i for i in train_val_idx if self.val_lookup[i]]
+        self.train_idx = [i for i in train_val_idx if val_lookup[i]]
         random.shuffle(self.train_idx)
 
         
@@ -215,22 +215,23 @@ class ChampSelector(Selector):
         test_index = self.test_idx.copy()
         for i in test_index:
             self.test_idx.append(i+self.half)
-        random.shuffle(self.test_idx)
+        self.test_lookup = {i:(True if i in self.test_idx else False) for i in self.dataset_idx}
         self.sample_train_val_idx()
             
     def sample_train_val_idx(self):
-        train_val_idx = [i for i in self.dataset_idx if i != self.test_idx]
-        self.train_idx = random.sample(train_val_idx, int(len(train_val_idx)*(1-self.split)))
-        train_index = self.train_idx.copy()
-        for i in train_index:
-            self.train_idx.append(i+self.half)
-        random.shuffle(self.train_idx)
-        
-        self.val_idx = [i for i in train_val_idx if i != self.train_idx]
+        train_val_idx = [i for i in self.dataset_idx if not self.test_look[i]]
+        self.val_idx = random.sample(train_val_idx, int(len(train_val_idx)*(self.split)))
         val_index = self.val_idx.copy()
         for i in val_index:
             self.val_idx.append(i+self.half)
+        val_lookup = {i:(True if i in self.val_idx else False) for i in train_val_idx}
         random.shuffle(self.val_idx)
+        
+        self.train_idx = [i for i in train_val_idx if not val_lookup[i]]
+        train_index = self.train_idx.copy()
+        for i in val_index:
+            self.train_idx.append(i+self.half)
+        random.shuffle(self.train_idx)
 
         
         
