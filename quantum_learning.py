@@ -142,7 +142,9 @@ class Learn():
                                          
 class Selector(Sampler):
     """A base class for subset selection for creating train, validation and test sets.
-    It is also possible to do filtering here or at the quantum_dataset level.
+    It is also possible to do filtering here or at the quantum_dataset level.  
+    A hashtable lookup optimization is used for the sampling/selecting the training,
+    validation and test sets.
     """
    
     def __init__(self, dataset_idx, split=.1, subset=False):
@@ -151,7 +153,10 @@ class Selector(Sampler):
             self.dataset_idx = random.sample(dataset_idx, int(len(dataset_idx)*subset))
         else:    
             self.dataset_idx = dataset_idx
+            
         self.test_idx = random.sample(self.dataset_idx, int(len(self.dataset_idx)*self.split))
+        self.test_lookup = {i:(True if i in self.test_idx else False) for i in self.dataset_idx}
+        
         self.sample_train_val_idx()
 
     def __iter__(self):
@@ -179,16 +184,21 @@ class Selector(Sampler):
         return self
     
     def sample_train_val_idx(self):
-        train_val_idx = [i for i in self.dataset_idx if i != self.test_idx]
-        self.train_idx = random.sample(train_val_idx, int(len(train_val_idx)*(1-self.split)))
-        self.val_idx = [i for i in train_val_idx if i != self.train_idx]
+        
+        train_val_idx = [i for i in self.dataset_idx if not self.test_lookup[i]]
+        self.val_idx = random.sample(train_val_idx, int(len(train_val_idx)*self.split))
+        self.val_lookup = {i:(True if i in self.val_idx else False) for i in train_val_idx}
+        
+        self.train_idx = [i for i in train_val_idx if self.val_lookup[i]]
+        random.shuffle(self.train_idx)
+
         
 class ChampSelector(Selector):
     """This class is for use with the Champs dataset.  If the Champs dataset has been created as an 
     undirected graph with connections (scc) pointing in both directions (if atom_idx_0 points to atom_idx_1
     then atom_idx_1 also points atom_idx_0) then when selecting the test hold out set both directions 
     need to be selected inorder to prevent a data leak.
-    TODO train a model on only one direction and test on the opposite
+    TODO try training a model on only one direction and testing on the opposite
     """
     def __init__(self, dataset_idx, split=.1, subset=.1):
         self.split = split

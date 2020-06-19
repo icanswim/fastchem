@@ -165,8 +165,8 @@ class QM7(QDataset):
         self.x_cat = []
         
     def __getitem__(self, i): 
-        return as_tensor(np.reshape(self.coulomb[i-1,:,:], -1)), self.x_cat, \
-                    as_tensor(np.reshape(self.ae[:,i-1], -1))
+        return as_tensor(np.reshape(self.coulomb[i,:,:], -1)), self.x_cat, \
+                    as_tensor(np.reshape(self.ae[:,i], -1))
       
     def __len__(self):
         return len(self.ds_idx)
@@ -177,7 +177,7 @@ class QM7(QDataset):
         self.xyz = qm7['R'] # (7165, 3)
         self.atoms = qm7['Z'] # (7165, 23)
         self.ae = qm7['T'] # (1, 7165) atomization energy
-        self.ds_idx = list(range(self.coulomb.shape[0]))
+        self.ds_idx = list(range(1, self.coulomb.shape[0]))
         
         
 class QM7b(QDataset):
@@ -289,7 +289,7 @@ class QM9(QDataset):
         # filter here
         self.ds_idx = list(self.datadic.keys())
         self.embeddings = []
-        self.x_cat = []
+        self.x_cat = [] # no categorical features
     
     def __getitem__(self, i):
         x_con, x_cat, y = self.load_mol(i)
