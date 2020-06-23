@@ -12,8 +12,6 @@ import matplotlib.pyplot as plt
 from torch import device, nn, cuda, optim, no_grad, save, load, cat
 from torch.utils.data import Sampler, DataLoader
 
-from sklearn.model_selection import train_test_split
-
 
 class Learn():
     
@@ -156,8 +154,8 @@ class Selector(Sampler):
         
         random.shuffle(dataset_idx)
         cut = int(len(dataset_idx)//(1/self.split))
-        self.test_idx = dataset_idx[-cut:]
-        self.dataset_idx = dataset_idx[:-cut]
+        self.test_idx = dataset_idx[:cut]
+        self.dataset_idx = dataset_idx[cut:]
 
     def __iter__(self):
         if self.flag == 'train':
@@ -186,9 +184,9 @@ class Selector(Sampler):
     def sample_train_val_idx(self):
         cut = int(len(self.dataset_idx)//(1/self.split))
         random.shuffle(self.dataset_idx)
-        self.train_idx = self.dataset_idx[:-cut]
-        self.val_idx = self.dataset_idx[-cut:]
-
+        
+        self.val_idx = self.dataset_idx[:cut]
+        self.train_idx = self.dataset_idx[cut:]
                                         
 class ChampSelector(Selector):
     """This class is for use with the Champs dataset.  If the Champs dataset has been created as an 
@@ -203,31 +201,36 @@ class ChampSelector(Selector):
         first = dataset_idx[:self.half] # only sample from the first half; second half is the reverse connections
 
         if subset:
-            self.dataset_idx = random.sample(first, int(len(first)*subset)) 
+            dataset_idx = random.sample(first, int(len(first)*subset)) 
         else:    
-            self.dataset_idx = first
-            
-        self.test_idx = random.sample(self.dataset_idx, int(len(self.dataset_idx)*self.split))
+            dataset_idx = first
+        
+        random.shuffle(dataset_idx)
+        cut = int(len(dataset_idx)//(1/self.split))
+        self.test_idx = dataset_idx[:cut]
+        self.dataset_idx = dataset_idx[cut:]
+        
         # add the reverse connections
         test_index = self.test_idx.copy()
         for i in test_index:
             self.test_idx.append(i+self.half)
-        self.test_lookup = {i:(True if i in self.test_idx else False) for i in self.dataset_idx}
             
     def sample_train_val_idx(self):
-        train_val_idx = [i for i in self.dataset_idx if not self.test_look[i]]
-        self.val_idx = random.sample(train_val_idx, int(len(train_val_idx)*(self.split)))
+        
+        cut = int(len(self.dataset_idx)//(1/self.split))
+        random.shuffle(self.dataset_idx)
+        
+        self.val_idx = self.dataset_idx[:cut]
+        self.train_idx = self.dataset_idx[cut:]
+        
         val_index = self.val_idx.copy()
         for i in val_index:
             self.val_idx.append(i+self.half)
-        val_lookup = {i:(True if i in self.val_idx else False) for i in train_val_idx}
-        random.shuffle(self.val_idx)
-        
-        self.train_idx = [i for i in train_val_idx if not val_lookup[i]]
+     
         train_index = self.train_idx.copy()
         for i in val_index:
             self.train_idx.append(i+self.half)
-        random.shuffle(self.train_idx)
+
 
         
         
