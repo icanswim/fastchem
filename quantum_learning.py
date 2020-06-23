@@ -94,7 +94,7 @@ class Learn():
         dataloader = DataLoader(self.ds, batch_size=self.bs, shuffle=False, 
                                 sampler=self.sampler(flag=flag), batch_sampler=None, 
                                 num_workers=8, collate_fn=None, pin_memory=True, 
-                                drop_last=False, timeout=0, worker_init_fn=None)
+                                drop_last=True, timeout=0, worker_init_fn=None)
   
         def to_cuda(data):
             if len(data) == 0: return []
@@ -184,7 +184,6 @@ class Selector(Sampler):
     def sample_train_val_idx(self):
         cut = int(len(self.dataset_idx)//(1/self.split))
         random.shuffle(self.dataset_idx)
-        
         self.val_idx = self.dataset_idx[:cut]
         self.train_idx = self.dataset_idx[cut:]
                                         
