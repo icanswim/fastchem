@@ -4,19 +4,22 @@ from torch.nn import functional as F
 class FFNet(nn.Module):
     
     model_config = {}
-    model_config['funnel'] = {'shape': [('D_in', 1), (1, 1/2), (1/2, 1/2), (1/2, 1/4), (1/4, 1/4), (1/4, 'D_out')], 
+    model_config['funnel'] = {'shape': [('D_in',1),(1,1/2),(1/2,1/2),(1/2,1/4),(1/4,1/4),(1/4,'D_out')], 
                                 'dropout': [.2, .2, .4, .2, .1]}
-    model_config['straight'] = {'shape': [('D_in', 1), (1, 1), (1, 1), (1, 1), (1, 1/4), (1/4, 'D_out')], 
-                                'dropout': [.2, .4, .4, .4, .1]}
-    model_config['bottle'] = {'shape': [('D_in', 1), (1, 1), (1, 1/2), (1/2, 1), (1, 1), (1, 1/4), (1/4, 'D_out')], 
+    model_config['straight'] = {'shape': [('D_in',1),(1,1),(1,1),(1,1),(1,1/4),(1/4,'D_out')],
+                                'dropout': [.2, .3, .4, .3, .2]}
+    model_config['bottle'] = {'shape': [('D_in',1),(1,1),(1,1/2),(1/2,1),(1,1),(1,1/4),(1/4,'D_out')], 
                               'dropout': [.2, .4, .2, .4, .4, .1]}
-    model_config['simple'] = {'shape': [('D_in', 1), (1, 1), (1, 1/2), (1/2, 'D_out')], 
+    model_config['simple'] = {'shape': [('D_in',1),(1,1),(1,1/2),(1/2,'D_out')], 
                               'dropout': [.2, .4, .1]}
-    model_config['deep'] = {'shape': [('D_in', 1), (1, 1), (1, 1), (1, 1/2), (1/2, 1/2), (1/2, 1/2), (1/2, 1/2), 
-                                      (1/2, 1/4), (1/4, 'D_out')], 
-                             'dropout': [.2, .4, .4, .2, .4, .4, .4, .2, .1]}
-    model_config['narrow'] = {'shape': [('D_in', 1), (1, 1), (1, 1/4), (1/4, 1/2), (1/2, 1/2), (1/2, 1/4), (1/4, 'D_out')], 
-                              'dropout': [.2, .4, .1, .3, .4, .1]}
+    model_config['deep'] = {'shape': [('D_in',1),(1,1),(1,1/2),(1/2,1/2),(1/2,1/2),(1/2,1/4),(1/4,1/4),(1/4,'D_out')], 
+                             'dropout': [.2, .4, .2, .3, .4, .2, .2]}
+    model_config['narrow'] = {'shape': [('D_in',1),(1,1/2),(1/2,1/4),(1/4,1/8),(1/8,1/16),(1/16,'D_out')], 
+                              'dropout': [.2, .4, .3, .2, .1]}
+    model_config['squeeze'] = {'shape': [('D_in',1),(1,1/2),(1/2,1/4),(1/4,1/16),(1/16,1/64),(1/64,'D_out')], 
+                               'dropout': [.1, .2, .1, .1, .05]}
+    model_config['wave'] = {'shape': [('D_in',1),(1,2),(2,1),(1,1/2),(1/2,1/4),(1/4,1/8),(1/8,'D_out')], 
+                                'dropout': [.2, .4, .4, .3, .2, .1]}
     
     def __init__(self, model_name='funnel', D_in=0, H=0, D_out=0, embeddings=[]):
         super().__init__()

@@ -63,7 +63,8 @@ class Learn():
                 self.run('train')
                 with no_grad():
                     self.run('val')
-                if e % 1 == 0:  
+                reports=10 # number of loss output reports printed during training
+                if epochs >= reports and e % int(epochs/reports) == 1:  
                     print('epoch: {} of {}, train loss: {}, val loss: {}'.format(
                                 e, epochs, self.train_log[-1], self.val_log[-1]))     
             with no_grad():
@@ -109,7 +110,7 @@ class Learn():
             if flag == 'infer':
                 y = np.reshape(y, (-1, 1)) # y = 'id'
                 y_pred = np.reshape(y_pred.data.to('cpu').numpy(), (-1, 1))
-                predictions.append(np.concatenate((y, y_pred), axis = 1)) 
+                predictions.append(np.concatenate((y, y_pred), axis=1)) 
             else:
                 y = to_cuda(y)           
                 b_loss = self.criterion(y_pred, y)
@@ -124,6 +125,7 @@ class Learn():
         if flag == 'test':  
             logging.info('test loss: {}'.format(e_loss/i))
             print('test loss: {}'.format(e_loss/i))
+            print('y_pred:\n{}\n y:\n{}'.format(y_pred[:10].data, y[:10].data))
         if flag == 'infer': 
             # TODO abstraction
             logging.info('inference complete')
@@ -131,6 +133,7 @@ class Learn():
             predictions = np.reshape(predictions, (-1, 2))
             self.predictions = pd.DataFrame(predictions, columns=['id','scalar_coupling_constant'])
             self.predictions['id'] = self.predictions['id'].astype('int64')
+            print('self.predictions.iloc[:10]', self.predictions.iloc[:10])
             self.predictions.to_csv('quantum_inference.csv', header=True, index=False)
             print('inference complete and saved to csv...')
 
@@ -142,7 +145,9 @@ class Learn():
 
 class Selector(Sampler):
     """A base class for subset selection for creating train, validation and test sets.
-    It is also possible to do filtering here or at the quantum_dataset level.  
+    Very fast, optimized for large datasets.  It is also possible to do filtering here 
+    or at the quantum_dataset level.  The validation set is bootstrapped (drawn from the
+    training set without replacement).
     """
    
     def __init__(self, dataset_idx, split=.1, subset=False):
@@ -153,7 +158,7 @@ class Selector(Sampler):
             dataset_idx = dataset_idx
         
         random.shuffle(dataset_idx)
-        cut = int(len(dataset_idx)//(1/self.split))
+        cut = int(len(dataset_idx)*self.split)
         self.test_idx = dataset_idx[:cut]
         self.dataset_idx = dataset_idx[cut:]
 
@@ -182,7 +187,7 @@ class Selector(Sampler):
         return self
     
     def sample_train_val_idx(self):
-        cut = int(len(self.dataset_idx)//(1/self.split))
+        cut = int(len(self.dataset_idx)*self.split)
         random.shuffle(self.dataset_idx)
         self.val_idx = self.dataset_idx[:cut]
         self.train_idx = self.dataset_idx[cut:]
@@ -216,7 +221,7 @@ class ChampSelector(Selector):
             
     def sample_train_val_idx(self):
         
-        cut = int(len(self.dataset_idx)//(1/self.split))
+        cut = int(len(self.dataset_idx)*self.split)
         random.shuffle(self.dataset_idx)
         
         self.val_idx = self.dataset_idx[:cut]
