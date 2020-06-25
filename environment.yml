@@ -66,7 +66,6 @@ dependencies:
   - diff-match-patch=20181111=py_0
   - distributed=2.17.0=py37_0
   - docutils=0.16=py37_1
-  - dscribe=0.3.2=py37hc9558a2_1
   - entrypoints=0.3=py37_0
   - et_xmlfile=1.0.1=py37_0
   - expat=2.2.6=he6710b0_0
