@@ -134,6 +134,7 @@ class Learn():
             self.predictions = pd.DataFrame(predictions, columns=['id','scalar_coupling_constant'])
             self.predictions['id'] = self.predictions['id'].astype('int64')
             print('self.predictions.iloc[:10]', self.predictions.iloc[:10])
+            print(self.predictions.shape)
             self.predictions.to_csv('quantum_inference.csv', header=True, index=False)
             print('inference complete and saved to csv...')
 
@@ -153,14 +154,14 @@ class Selector(Sampler):
     def __init__(self, dataset_idx, split=.1, subset=False):
         self.split = split 
         if subset:
-            dataset_idx = random.sample(dataset_idx, int(len(dataset_idx)*subset))
+            self.dataset_idx = random.sample(dataset_idx, int(len(dataset_idx)*subset))
         else:    
-            dataset_idx = dataset_idx
+            self.dataset_idx = dataset_idx
         
-        random.shuffle(dataset_idx)
-        cut = int(len(dataset_idx)*self.split)
-        self.test_idx = dataset_idx[:cut]
-        self.dataset_idx = dataset_idx[cut:]
+        random.shuffle(self.dataset_idx)
+        cut = int(len(self.dataset_idx)*self.split)
+        self.test_idx = self.dataset_idx[:cut]
+        self.train_val_idx = self.dataset_idx[cut:]
 
     def __iter__(self):
         if self.flag == 'train':
@@ -187,10 +188,10 @@ class Selector(Sampler):
         return self
     
     def sample_train_val_idx(self):
-        cut = int(len(self.dataset_idx)*self.split)
-        random.shuffle(self.dataset_idx)
-        self.val_idx = self.dataset_idx[:cut]
-        self.train_idx = self.dataset_idx[cut:]
+        cut = int(len(self.train_val_idx)*self.split)
+        random.shuffle(self.train_val_idx)
+        self.val_idx = self.train_val_idx[:cut]
+        self.train_idx = self.train_val_idx[cut:]
                                         
 class ChampSelector(Selector):
     """This class is for use with the Champs dataset.  If the Champs dataset has been created as an 
