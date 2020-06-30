@@ -30,4 +30,5 @@ pytorch = 1.4
 cuda = 10.1
 
 see fastchem_setup.txt for implementation notes.
+
 see quantum_experiment.ipynb for examples.
