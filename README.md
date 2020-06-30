@@ -1,3 +1,6 @@
+# fastchem
+Quantum datasets, models and learners for machine learning; implemented in pytorch
+
 An exploration of the state of the art in Quantum Machine Learning.
 
 Quantum datasets, models and learners for machine learning; implemented in pytorch.
