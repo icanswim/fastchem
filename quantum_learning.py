@@ -134,8 +134,9 @@ class Learn():
             self.predictions = pd.DataFrame(predictions, columns=['id','scalar_coupling_constant'])
             self.predictions['id'] = self.predictions['id'].astype('int64')
             print('self.predictions.iloc[:10]', self.predictions.iloc[:10])
-            print(self.predictions.shape)
-            self.predictions.to_csv('quantum_inference.csv', header=True, index=False)
+            self.predictions.to_csv('quantum_inference.csv', 
+                                    header=['id','scalar_coupling_constant'], 
+                                    index=False)
             print('inference complete and saved to csv...')
 
     @classmethod    

@@ -5,7 +5,7 @@ class FFNet(nn.Module):
     
     model_config = {}
     model_config['funnel'] = {'shape': [('D_in',1),(1,1/2),(1/2,1/2),(1/2,1/4),(1/4,1/4),(1/4,'D_out')], 
-                                'dropout': [.2, .2, .4, .2, .1]}
+                              'dropout': [.2, .2, .4, .2, .1]}
 
     def __init__(self, model_name='funnel', D_in=0, H=0, D_out=0, embeddings=[]):
         super().__init__()
