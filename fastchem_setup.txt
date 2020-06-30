@@ -19,8 +19,9 @@ cuda=10.1
 pytorch=1.4 and 1.5 working
 
 1. may need to enable third party extensions in gcp jupyter notebook Extension Manager options
-2. conda create --name fastchem --file conda_env_spec.txt
-3. may need to run conda install -c rdkit rdkit in notebook which installs an
-updated certificate.  not sure whats the problem here.  TODO.
-4. python -m ipykernel install --user --name=fastchem #makes conda env
-available as a notebook kernel
+2. install nb_conda_kernels and ipykernel in the general conda enviornment  
+3. conda create --name fastchem --file conda_env_spec.txt
+4. may need to run conda install -c rdkit rdkit in notebook which installs an
+   updated certificate.  not sure whats the problem here.  TODO.
+5. python -m ipykernel install --user --name=fastchem #makes conda env
+   available as a notebook kernel
