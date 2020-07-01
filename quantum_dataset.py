@@ -390,7 +390,7 @@ class Champs(QDataset):
     types = ['1JHC', '2JHH', '1JHN', '2JHN', '2JHC', '3JHH', '3JHC', '3JHN']
     atomic_n = {'C': 6, 'H': 1, 'N': 7, 'O': 8, 'F': 9}
     
-    def __init__(self, in_dir='./data/champs/', n=4658147, features=False, use_h5=False, infer=False):
+    def __init__(self, in_dir='./data/champs/', n=4658147, features=[], use_h5=False, infer=False):
         self.in_dir = in_dir
         self.embeddings = [(8,128,True),(32,32,False),(4,64,True),(32,32,False),(4,64,True)]  
         self.con_ds, self.cat_ds, self.target_ds = self.load_data(self.in_dir, features,
@@ -448,6 +448,7 @@ class Champs(QDataset):
                  'atom_index_1','atom_1','x_1','y_1','z_1']]
 
         if not infer:
+            print('bing: if not infer')
             df = pd.concat([df, target_ds], axis=1)        
             # create reverse connections           
             rev = df.copy()
@@ -462,8 +463,8 @@ class Champs(QDataset):
            
         categorical = ['type','atom_index_0','atom_0','atom_index_1','atom_1']
         continuous = ['x_0','y_0','z_0','x_1','y_1','z_1']
-        if not features:
-            continuous = []
+        
+        continuous = features
         
         df[categorical] = df[categorical].astype('category')
         df[categorical] = df[categorical].apply(lambda x: x.cat.codes)

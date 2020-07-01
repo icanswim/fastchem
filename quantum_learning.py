@@ -66,7 +66,11 @@ class Learn():
                 reports=10 # number of loss output reports printed during training
                 if epochs >= reports and e % int(epochs/reports) == 1:  
                     print('epoch: {} of {}, train loss: {}, val loss: {}'.format(
-                                e, epochs, self.train_log[-1], self.val_log[-1]))     
+                                e, epochs, self.train_log[-1], self.val_log[-1]))
+                else: 
+                    print('epoch: {} of {}, train loss: {}, val loss: {}'.format(
+                                e, epochs, self.train_log[-1], self.val_log[-1]))
+                   
             with no_grad():
                 self.run('test')
                 
@@ -86,7 +90,7 @@ class Learn():
         print('learning time: {}'.format(elapsed))
         
     def run(self, flag): 
-        
+        print('running...')
         e_loss, i, predictions = 0, 0, []
         
         self.model.training = True
@@ -133,7 +137,7 @@ class Learn():
             predictions = np.reshape(predictions, (-1, 2))
             self.predictions = pd.DataFrame(predictions, columns=['id','scalar_coupling_constant'])
             self.predictions['id'] = self.predictions['id'].astype('int64')
-            print('self.predictions.iloc[:10]', self.predictions.iloc[:10])
+            print('self.predictions.iloc[:10]', self.predictions.shape, self.predictions.iloc[:10])
             self.predictions.to_csv('quantum_inference.csv', 
                                     header=['id','scalar_coupling_constant'], 
                                     index=False)
@@ -210,7 +214,7 @@ class ChampSelector(Selector):
             dataset_idx = random.sample(first, int(len(first)*subset)) 
         else:    
             dataset_idx = first
-        
+        #TODO fix inference
         random.shuffle(dataset_idx)
         cut = int(len(dataset_idx)//(1/self.split))
         self.test_idx = dataset_idx[:cut]

@@ -18,10 +18,15 @@ gcp image is cuda=10.1 and pytorch=1.4
 cuda=10.1
 pytorch=1.4 and 1.5 working
 
-1. may need to enable third party extensions in gcp jupyter notebook Extension Manager options
-2. install nb_conda_kernels and ipykernel in the general conda enviornment  
+notes for conda jupyter notebook implementation
+1. if using gcp you may need to enable third party extensions in gcp jupyter notebook Extension Manager options
+2. install nb_conda_kernels and ipykernel in the general conda environment  
 3. conda create --name fastchem --file conda_env_spec.txt
 4. may need to run conda install -c rdkit rdkit in notebook which installs an
    updated certificate.  not sure whats the problem here.  TODO.
-5. python -m ipykernel install --user --name=fastchem #makes conda env
+5. if using gcp you may need to run python -m ipykernel install --user --name=fastchem #makes conda env
    available as a notebook kernel
+6. create folders data logs and models in your project dir
+7. in the  data folder create the  dataset specific folder (qm9, qm7, champs).
+   this is the QDataset in_dir location where the load_data function will
+   look.  place your data here. 
