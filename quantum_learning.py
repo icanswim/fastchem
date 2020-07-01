@@ -93,13 +93,23 @@ class Learn():
         print('running...')
         e_loss, i, predictions = 0, 0, []
         
-        self.model.training = True
-        if flag != 'train': self.model.training = False
-        
+        if flag == 'train': 
+            self.model.training = True
+            drop_last = True
+        if flag == 'val':
+            self.model.training = False
+            drop_last = True
+        if flag == 'test':
+            self.model.training = False
+            drop_last = True
+        if flag == 'infer':
+            self.model.training = False
+            drop_last = False
+            
         dataloader = DataLoader(self.ds, batch_size=self.bs, shuffle=False, 
                                 sampler=self.sampler(flag=flag), batch_sampler=None, 
                                 num_workers=8, collate_fn=None, pin_memory=True, 
-                                drop_last=True, timeout=0, worker_init_fn=None)
+                                drop_last=drop_last, timeout=0, worker_init_fn=None)
   
         def to_cuda(data):
             if len(data) == 0: return []
@@ -154,6 +164,7 @@ class Selector(Sampler):
     Very fast, optimized for large datasets.  It is also possible to do filtering here 
     or at the quantum_dataset level.  The validation set is bootstrapped (drawn from the
     training set without replacement).
+    TODO memory optimization
     """
    
     def __init__(self, dataset_idx, split=.1, subset=False):
@@ -203,9 +214,10 @@ class ChampSelector(Selector):
     undirected graph with connections (scc) pointing in both directions (if atom_idx_0 points to atom_idx_1
     then atom_idx_1 also points atom_idx_0) then when selecting the test hold out set both directions 
     need to be selected inorder to prevent a data leak.
+    TODO doesnt work for inference, use Selector class
     TODO try training a model on only one direction and testing on the opposite
     """
-    def __init__(self, dataset_idx, split=.1, subset=.1):
+    def __init__(self, dataset_idx, split=.1, subset=False):
         self.split = split
         self.half = int(len(dataset_idx)/2) # 4658147
         first = dataset_idx[:self.half] # only sample from the first half; second half is the reverse connections
@@ -214,7 +226,7 @@ class ChampSelector(Selector):
             dataset_idx = random.sample(first, int(len(first)*subset)) 
         else:    
             dataset_idx = first
-        #TODO fix inference
+        
         random.shuffle(dataset_idx)
         cut = int(len(dataset_idx)//(1/self.split))
         self.test_idx = dataset_idx[:cut]
@@ -224,6 +236,7 @@ class ChampSelector(Selector):
         test_index = self.test_idx.copy()
         for i in test_index:
             self.test_idx.append(i+self.half)
+            
             
     def sample_train_val_idx(self):
         

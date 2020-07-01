@@ -390,11 +390,10 @@ class Champs(QDataset):
     types = ['1JHC', '2JHH', '1JHN', '2JHN', '2JHC', '3JHH', '3JHC', '3JHN']
     atomic_n = {'C': 6, 'H': 1, 'N': 7, 'O': 8, 'F': 9}
     
-    def __init__(self, in_dir='./data/champs/', n=4658147, features=[], use_h5=False, infer=False):
+    def __init__(self, in_dir='./data/champs/', n=4658147, features=True, use_h5=False, infer=False):
         self.in_dir = in_dir
         self.embeddings = [(8,128,True),(32,32,False),(4,64,True),(32,32,False),(4,64,True)]  
-        self.con_ds, self.cat_ds, self.target_ds = self.load_data(self.in_dir, features,
-                                                                  use_h5, infer)
+        self.con_ds, self.cat_ds, self.target_ds = self.load_data(self.in_dir, features, use_h5, infer)
         self.ds_idx = list(range(len(self.target_ds)))
         
     def __getitem__(self, i):
@@ -463,8 +462,8 @@ class Champs(QDataset):
            
         categorical = ['type','atom_index_0','atom_0','atom_index_1','atom_1']
         continuous = ['x_0','y_0','z_0','x_1','y_1','z_1']
-        
-        continuous = features
+        if not features:
+            continuous = []
         
         df[categorical] = df[categorical].astype('category')
         df[categorical] = df[categorical].apply(lambda x: x.cat.codes)
