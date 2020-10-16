@@ -6,7 +6,11 @@ class FFNet(nn.Module):
     model_config = {}
     model_config['funnel'] = {'shape': [('D_in',1),(1,1/2),(1/2,1/2),(1/2,1/4),(1/4,1/4),(1/4,'D_out')], 
                               'dropout': [.2, .2, .4, .2, .1]}
-
+    model_config['deep'] = {'shape': [('D_in',1),(1,1/2),(1/2,1/2),(1/2,1/4),(1/4,1/4),(1/4,1/16),
+                                      (1/16,1/64),(1/64,'D_out')], 
+                              'dropout': [.2, .2, .4, .2, .4, .2, .1]}
+    
+    
     def __init__(self, model_name='funnel', D_in=0, H=0, D_out=0, embeddings=[]):
         super().__init__()
         self.embeddings = [nn.Embedding(voc, vec).to('cuda:0') for voc, vec, _ in embeddings]
@@ -61,5 +65,24 @@ class FFNet(nn.Module):
             self.layers.insert(0, l)
    
         
-            
+class EncoderLSTM(nn.Module):
+    def __init__(self, input_size, hidden_size, n_layers=1, drop_prob=0):
+        super(EncoderLSTM, self).__init__()
+        self.hidden_size = hidden_size
+        self.n_layers = n_layers
+
+        self.embedding = nn.Embedding(input_size, hidden_size)
+        self.lstm = nn.LSTM(hidden_size, hidden_size, n_layers, dropout=drop_prob, batch_first=True)
+
+    def forward(self, inputs, hidden):
+        # Embed input words
+        embedded = self.embedding(inputs)
+        # Pass the embedded word vectors into LSTM and return all outputs
+        output, hidden = self.lstm(embedded, hidden)
+        return output, hidden
+
+    def init_hidden(self, batch_size=1):
+        return (torch.zeros(self.n_layers, batch_size, self.hidden_size, device=device),
+                torch.zeros(self.n_layers, batch_size, self.hidden_size, device=device))
+           
     

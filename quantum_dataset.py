@@ -447,7 +447,6 @@ class Champs(QDataset):
                  'atom_index_1','atom_1','x_1','y_1','z_1']]
 
         if not infer:
-            print('bing: if not infer')
             df = pd.concat([df, target_ds], axis=1)        
             # create reverse connections           
             rev = df.copy()

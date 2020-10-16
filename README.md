@@ -1,6 +1,6 @@
 ## An exploration of the state of the art in Quantum Machine Learning.
 
-#Quantum datasets, models and learners for machine learning; implemented in pytorch.
+# Quantum datasets, models and learners for machine learning; implemented in pytorch.
 
 Bypassing the Kohn-Sham equations with machine learning
 https://www.nature.com/articles/s41467-017-00839-3
@@ -16,6 +16,12 @@ https://arxiv.org/abs/1812.05055
 
 MoleculeNet: A Benchmark for Molecular Machine Learning
 https://arxiv.org/abs/1703.00564
+
+QM7-X: A comprehensive dataset of quantum-mechanical properties spanning the chemical space of small organic molecules
+https://arxiv.org/abs/2006.15139
+
+The ANI-1ccx and ANI-1x data sets, coupled-cluster and density functional theory properties for molecules
+https://www.nature.com/articles/s41597-020-0473-z
 
 https://www.kaggle.com/c/champs-scalar-coupling
 

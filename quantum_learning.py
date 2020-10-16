@@ -63,14 +63,9 @@ class Learn():
                 self.run('train')
                 with no_grad():
                     self.run('val')
-                reports=10 # number of loss output reports printed during training
-                if epochs >= reports and e % int(epochs/reports) == 1:  
+                if e % int(epochs/10) == 0:
                     print('epoch: {} of {}, train loss: {}, val loss: {}'.format(
                                 e, epochs, self.train_log[-1], self.val_log[-1]))
-                else: 
-                    print('epoch: {} of {}, train loss: {}, val loss: {}'.format(
-                                e, epochs, self.train_log[-1], self.val_log[-1]))
-                   
             with no_grad():
                 self.run('test')
                 
@@ -90,7 +85,6 @@ class Learn():
         print('learning time: {}'.format(elapsed))
         
     def run(self, flag): 
-        print('running...')
         e_loss, i, predictions = 0, 0, []
         
         if flag == 'train': 
@@ -236,7 +230,6 @@ class ChampSelector(Selector):
         test_index = self.test_idx.copy()
         for i in test_index:
             self.test_idx.append(i+self.half)
-            
             
     def sample_train_val_idx(self):
         
