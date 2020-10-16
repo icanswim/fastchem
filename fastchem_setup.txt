@@ -5,7 +5,7 @@ dependencies:
   - jupyter #conda install -c conda-forge nb_conda_kernels
             #conda install -c anaconda ipykernel
             #testing conda install -c conda-forge jupyterlab
-  - python=3.8 #conda install -c anaconda python numpy pandas scipy
+  - python=3.6 #conda install -c anaconda python=3.6 numpy pandas scipy
   - numpy
   - pandas
   - scipy
@@ -15,6 +15,7 @@ dependencies:
   - matplotlib.pyplot #conda install -c anaconda matplotlib
   - git #conda install -c anaconda git
 
+rdkit requires python=3.6
 gcp image is cuda=10.1 and pytorch=1.4 
 
 notes for conda jupyter notebook implementation
