@@ -49,19 +49,20 @@ class Molecule(ABC):
             return data
         
     def rdmol_from_smile(self, smile):
-        self.rdmol = Chem.AddHs(Chem.MolFromSmiles(smile))
+        #self.rdmol = Chem.AddHs(Chem.MolFromSmiles(smile))
+        self.rdmol = Chem.MolFromSmiles(smile)
     
     def create_adjacency(self, rdmol):
         """use the rdmol mol block adjacency list to create a nxn symetric matrix with 0, 1, 2 or
         3 for bond type where n is the indexed atom list for the molecule"""
         block = Chem.MolToMolBlock(rdmol)
         self.adjacency = np.zeros((self.n_atoms, self.n_atoms), dtype='float32')
-        block = block.strip(' ').split('\n')
         for b in block:
-            b = b.split()
+            b = ''.join(b.split())
             if len(b) == 4:
                 self.adjacency[(int(b[0])-1),(int(b[1])-1)] = int(b[2]) # shift -1 to index from zero
                 self.adjacency[(int(b[1])-1),(int(b[0])-1)] = int(b[2]) # create bi-directional connection
+        print('self.adjacency: ', self.adjacency)
              
     def create_distance(self, xyz):
         m = np.zeros((len(xyz), 3))
@@ -112,7 +113,7 @@ class QM9Mol(Molecule):
         self.smile = xyz[-2]
         self.n_atoms = int(xyz[0])
         self.properties = xyz[1].strip().split('\t')[1:] # [float,...]
-        
+            
         self.xyz = []
         for atom in xyz[2:self.n_atoms+2]:
             self.xyz.append(atom.strip().split('\t')) # [['atom_type',x,y,z,mulliken],...]
@@ -477,7 +478,7 @@ class Champs(QDataset):
         if use_h5:
             print('creating Champs h5 dataset...')
             with h5py.File(in_dir+'champs_cat.h5', 'w') as h5p:
-                cat_ds = h5p.create_dataset('x_cat', data=cat_ds, chunks=True)[()]  # index in with empty tuple [()]
+                cat_ds = h5p.create_dataset('x_cat', data=cat_ds, chunks=True)[()] #index in with empty tuple [()]
             with h5py.File(in_dir+'champs_con.h5', 'w') as h5p:
                 con_ds = h5p.create_dataset('x_con', data=con_ds, chunks=True)[()]
             with h5py.File(in_dir+'champs_target.h5', 'w') as h5p:

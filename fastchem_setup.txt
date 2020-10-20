@@ -2,18 +2,16 @@ gcp and conda implementation notes
 
 name: fastchem
 dependencies:
+  - python=3.7 #conda install -c anaconda python=3.7 numpy pandas scipy
   - jupyter #conda install -c conda-forge jupyterlab
-  - python=3.6 #conda install -c anaconda python=3.6 numpy pandas scipy
-  - numpy
-  - pandas
-  - scipy
-  - rdkit #conda install -c rdkit rdkit libboost=1.65.1
+  - rdkit #conda install -c rdkit rdkit
   - pytorch #conda install pytorch torchvision cudatoolkit=10.1 -c pytorch
   - h5py #conda install -c anaconda h5py
   - matplotlib.pyplot #conda install -c anaconda matplotlib
   - git #conda install -c anaconda git
 
-rdkit requires python=3.6
+rdkit requires python=3.7
+pytorch requires cuda=10.1
 gcp image is cuda=10.1 and pytorch=1.4 
 
 notes for conda jupyter notebook/lab implementation
