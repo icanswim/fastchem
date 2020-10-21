@@ -2,6 +2,9 @@
 
 # Quantum datasets, models and learners for machine learning; implemented in pytorch.
 
+Ab initio solution of the many-electron Schrödinger equation with deep neural networks
+https://journals.aps.org/prresearch/abstract/10.1103/PhysRevResearch.2.033429
+
 Bypassing the Kohn-Sham equations with machine learning
 https://www.nature.com/articles/s41467-017-00839-3
 
@@ -27,7 +30,7 @@ https://www.kaggle.com/c/champs-scalar-coupling
 
 http://quantum-machine.org/datasets/
 
-pytorch = 1.4 cuda = 10.1
+pytorch = 1.6 cuda = 10.1
 
 see fastchem_setup.txt for implementation notes.
 

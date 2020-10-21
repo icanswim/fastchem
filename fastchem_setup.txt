@@ -5,14 +5,14 @@ dependencies:
   - python=3.7 #conda install -c anaconda python=3.7 numpy pandas scipy
   - jupyter #conda install -c conda-forge jupyterlab
   - rdkit #conda install -c rdkit rdkit
-  - pytorch #conda install pytorch torchvision cudatoolkit=10.1 -c pytorch
+  - pytorch=1.6 #conda install pytorch torchvision cudatoolkit=10.1 -c pytorch
   - h5py #conda install -c anaconda h5py
   - matplotlib.pyplot #conda install -c anaconda matplotlib
   - git #conda install -c anaconda git
 
 rdkit requires python=3.7
 pytorch requires cuda=10.1
-gcp image is cuda=10.1 and pytorch=1.4 
+current gcp image is cuda=10.1 and pytorch=1.4 
 
 notes for conda jupyter notebook/lab implementation
 1. if using gcp you may need to enable third party extensions in gcp jupyter notebook Extension Manager options
