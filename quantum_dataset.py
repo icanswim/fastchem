@@ -49,20 +49,21 @@ class Molecule(ABC):
             return data
         
     def rdmol_from_smile(self, smile):
-        #self.rdmol = Chem.AddHs(Chem.MolFromSmiles(smile))
-        self.rdmol = Chem.MolFromSmiles(smile)
+        self.rdmol = Chem.AddHs(Chem.MolFromSmiles(smile))
     
     def create_adjacency(self, rdmol):
         """use the rdmol mol block adjacency list to create a nxn symetric matrix with 0, 1, 2 or
         3 for bond type where n is the indexed atom list for the molecule"""
         block = Chem.MolToMolBlock(rdmol)
         self.adjacency = np.zeros((self.n_atoms, self.n_atoms), dtype='float32')
-        for b in block:
-            b = ''.join(b.split())
-            if len(b) == 4:
-                self.adjacency[(int(b[0])-1),(int(b[1])-1)] = int(b[2]) # shift -1 to index from zero
-                self.adjacency[(int(b[1])-1),(int(b[0])-1)] = int(b[2]) # create bi-directional connection
-        print('self.adjacency: ', self.adjacency)
+        block = block.split('\n')
+        for b in block[:-2]:
+            line = ''.join(b.split())
+            if len(line) == 4:
+                # shift -1 to index from zero
+                self.adjacency[(int(line[0])-1),(int(line[1])-1)] = int(line[2]) 
+                # create bi-directional connection
+                self.adjacency[(int(line[1])-1),(int(line[0])-1)] = int(line[2]) 
              
     def create_distance(self, xyz):
         m = np.zeros((len(xyz), 3))
@@ -229,7 +230,8 @@ class QM9(QDataset):
    
     dsgdb9nsd.xyz.tar.bz2    - 133885 molecules with properties in XYZ-like format
     dsC7O2H10nsd.xyz.tar.bz2 - 6095 isomers of C7O2H10 with properties in XYZ-like format
-    validation.txt           - 100 randomly drawn molecules from the 133885 set with enthalpies of formation
+    validation.txt           - 100 randomly drawn molecules from the 133885 set with 
+                               enthalpies of formation
     uncharacterized.txt      - 3054 molecules from the 133885 set that failed a consistency check
     atomref.txt              - Atomic reference data
     readme.txt               - Documentation
@@ -374,8 +376,10 @@ class Champs(QDataset):
     85003 molecules, 1533536 atoms, 4658146 couplings, 2505542 test couplings
     
     potential_energy.csv ['molecule_name','potential_energy'] 
-    scalar_coupling_contributions.csv ['molecule_name','atom_index_0','atom_index_1','type','fc','sd','pso','dso'] 
-    train.csv ['id','molecule_name','atom_index_0','atom_index_1','type','scalar_coupling_constant'] 
+    scalar_coupling_contributions.csv 
+        ['molecule_name','atom_index_0','atom_index_1','type','fc','sd','pso','dso'] 
+    train.csv 
+        ['id','molecule_name','atom_index_0','atom_index_1','type','scalar_coupling_constant'] 
     dipole_moments.csv ['molecule_name','X','Y','Z'] 
     mulliken_charges.csv ['molecule_name','atom_index','mulliken_charge'] 
     sample_submission.csv ['id','scalar_coupling_constant'] 
@@ -478,7 +482,8 @@ class Champs(QDataset):
         if use_h5:
             print('creating Champs h5 dataset...')
             with h5py.File(in_dir+'champs_cat.h5', 'w') as h5p:
-                cat_ds = h5p.create_dataset('x_cat', data=cat_ds, chunks=True)[()] #index in with empty tuple [()]
+                # index in with empty tuple [()]
+                cat_ds = h5p.create_dataset('x_cat', data=cat_ds, chunks=True)[()] 
             with h5py.File(in_dir+'champs_con.h5', 'w') as h5p:
                 con_ds = h5p.create_dataset('x_con', data=con_ds, chunks=True)[()]
             with h5py.File(in_dir+'champs_target.h5', 'w') as h5p:
