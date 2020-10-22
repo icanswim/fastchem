@@ -15,11 +15,11 @@ https://arxiv.org/abs/2010.07067
 Unifying machine learning and quantum chemistry -- a deep neural network for molecular wavefunctions  
 https://arxiv.org/abs/1906.10033
 
+Integrating Machine Learning with Physics-Based Modeling
+https://arxiv.org/abs/2006.02619
+
 Bypassing the Kohn-Sham equations with machine learning  
 https://www.nature.com/articles/s41467-017-00839-3
-
-A first principles theory of nuclear magnetic resonance J-coupling in solid-state systems  
-https://aip.scitation.org/doi/10.1063/1.2801984
 
 Solving Many-Electron Schrödinger Equation Using Deep Neural Networks  
 https://arxiv.org/abs/1807.07014
