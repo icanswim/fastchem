@@ -2,6 +2,9 @@
 
 # Quantum datasets, models and learners for machine learning; implemented in pytorch.
 
+Deep learning for molecular design - a review of the state of the art  
+https://arxiv.org/abs/1903.04388
+
 Ab initio solution of the many-electron Schrödinger equation with deep neural networks  
 https://journals.aps.org/prresearch/abstract/10.1103/PhysRevResearch.2.033429  
 https://github.com/deepmind/ferminet
