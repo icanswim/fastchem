@@ -4,13 +4,11 @@ from torch.nn import functional as F
 class FFNet(nn.Module):
     
     model_config = {}
+    model_config['simple'] = {'shape': [('D_in',1),(1,1),(1,1/2),(1/2,'D_out')], 
+                              'dropout': [.2, .3, .1]}
     model_config['funnel'] = {'shape': [('D_in',1),(1,1/2),(1/2,1/2),(1/2,1/4),(1/4,1/4),(1/4,'D_out')], 
-                              'dropout': [.2, .2, .4, .2, .1]}
-    model_config['deep'] = {'shape': [('D_in',1),(1,1/2),(1/2,1/2),(1/2,1/4),(1/4,1/4),(1/4,1/16),
-                                      (1/16,1/64),(1/64,'D_out')], 
-                              'dropout': [.2, .2, .4, .2, .4, .2, .1]}
-    
-    
+                              'dropout': [.1, .2, .3, .2, .1]}
+
     def __init__(self, model_name='funnel', D_in=0, H=0, D_out=0, embeddings=[]):
         super().__init__()
         self.embeddings = [nn.Embedding(voc, vec).to('cuda:0') for voc, vec, _ in embeddings]

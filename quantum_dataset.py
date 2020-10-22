@@ -395,7 +395,7 @@ class Champs(QDataset):
     types = ['1JHC', '2JHH', '1JHN', '2JHN', '2JHC', '3JHH', '3JHC', '3JHN']
     atomic_n = {'C': 6, 'H': 1, 'N': 7, 'O': 8, 'F': 9}
     
-    def __init__(self, in_dir='./data/champs/', n=4658147, features=True, use_h5=False, infer=False):
+    def __init__(self, in_dir='./data/champs/', n=4658146, features=True, use_h5=False, infer=False):
         self.in_dir = in_dir
         self.embeddings = [(8,128,True),(32,32,False),(4,64,True),(32,32,False),(4,64,True)]  
         self.con_ds, self.cat_ds, self.target_ds = self.load_data(self.in_dir, features, use_h5, infer)
