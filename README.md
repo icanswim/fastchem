@@ -15,7 +15,7 @@ https://arxiv.org/abs/2010.07067
 Unifying machine learning and quantum chemistry -- a deep neural network for molecular wavefunctions  
 https://arxiv.org/abs/1906.10033
 
-Integrating Machine Learning with Physics-Based Modeling
+Integrating Machine Learning with Physics-Based Modeling  
 https://arxiv.org/abs/2006.02619
 
 Bypassing the Kohn-Sham equations with machine learning  
