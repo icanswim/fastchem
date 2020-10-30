@@ -9,6 +9,10 @@ Ab initio solution of the many-electron Schrödinger equation with deep neural n
 https://journals.aps.org/prresearch/abstract/10.1103/PhysRevResearch.2.033429  
 https://github.com/deepmind/ferminet
 
+NetKet: A Machine Learning Toolkit for Many-Body Quantum Systems  
+https://arxiv.org/abs/1904.00031  
+https://github.com/netket/netket
+
 Machine Learning Force Fields  
 https://arxiv.org/abs/2010.07067
 

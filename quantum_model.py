@@ -64,13 +64,15 @@ class FFNet(nn.Module):
    
         
 class EncoderLSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, n_layers=1, drop_prob=0):
-        super(EncoderLSTM, self).__init__()
+    
+    def __init__(self, input_size, hidden_size, n_layers=1, drop=0):
+        super().__init__()
         self.hidden_size = hidden_size
         self.n_layers = n_layers
 
-        self.embedding = nn.Embedding(input_size, hidden_size)
-        self.lstm = nn.LSTM(hidden_size, hidden_size, n_layers, dropout=drop_prob, batch_first=True)
+        self.embedding = nn.Embedding(input_size, hidden_size).to('cuda:0')
+        self.lstm = nn.LSTM(hidden_size, hidden_size, n_layers, dropout=drop, 
+                            batch_first=True).to('cuda:0')
 
     def forward(self, inputs, hidden):
         # Embed input words
@@ -80,7 +82,27 @@ class EncoderLSTM(nn.Module):
         return output, hidden
 
     def init_hidden(self, batch_size=1):
-        return (torch.zeros(self.n_layers, batch_size, self.hidden_size, device=device),
-                torch.zeros(self.n_layers, batch_size, self.hidden_size, device=device))
+        return (torch.zeros(self.n_layers, batch_size, self.hidden_size, device='cuda:0'),
+                torch.zeros(self.n_layers, batch_size, self.hidden_size, device='cuda:0'))
            
     
+class DecoderRNN(nn.Module):
+    
+    def __init__(self, hidden_size, output_size):
+        super().__init__()
+        self.hidden_size = hidden_size
+
+        self.embedding = nn.Embedding(output_size, hidden_size).to('cuda:0')
+        self.gru = nn.GRU(hidden_size, hidden_size).to('cuda:0')
+        self.out = nn.Linear(hidden_size, output_size)
+        self.softmax = nn.LogSoftmax(dim=1)
+
+    def forward(self, input, hidden):
+        output = self.embedding(input).view(1, 1, -1)
+        output = F.relu(output)
+        output, hidden = self.gru(output, hidden)
+        output = self.softmax(self.out(output[0]))
+        return output, hidden
+
+    def init_hidden(self):
+        return torch.zeros(1, 1, self.hidden_size, device='cuda:0')
