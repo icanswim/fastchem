@@ -1,8 +1,5 @@
 from abc import ABC, abstractmethod
-import os
-import random
-import h5py
-import pickle
+import os, re, random, h5py, pickle
 
 import pandas as pd
 from pandas.api.types import CategoricalDtype
@@ -18,7 +15,7 @@ from torch import as_tensor, cat
 
 
 class Molecule(ABC):
-    """A class for creating a rdmol obj and coulomb matrix from a smile.
+    """A class for creating a rdmol obj and coulomb matrix from a smile.  
     Subclass and implement load_data()"""
     
     atomic_n = {'C': 6, 'H': 1, 'N': 7, 'O': 8, 'F': 9}
@@ -136,7 +133,8 @@ class QDataset(Dataset, ABC):
     
     @abstractmethod
     def __getitem__(self, i):  # set X and y and do preprocessing here
-        return x_con[i], x_cat[i], target[i]  # continuous, categorical, target.  empty list if none.
+        # continuous, categorical, target.  empty list if none.
+        return as_tensor(x_con[i]), as_tensor(x_cat[i]), as_tensor(target[i])  
     
     @abstractmethod
     def __len__(self):
@@ -145,8 +143,143 @@ class QDataset(Dataset, ABC):
     @abstractmethod
     def load_data(self):
         return data
-        
+
+class QM7X(QDataset):
+    """QM7-X: A comprehensive dataset of quantum-mechanical properties spanning 
+    the chemical space of small organic molecules
+    https://arxiv.org/abs/2006.15139
+    https://zenodo.org/record/3905361
     
+    decompress the .xz files in ./QM7X/
+    tar xvf 1000.xz
+    
+    1000.hdf5 6.5 GB
+    2000.hdf5 8.8 GB
+    3000.hdf5 16.9 GB
+    4000.hdf5 12.4 GB
+    5000.hdf5 9.8 GB
+    6000.hdf5 17.2 GB
+    7000.hdf5 9.8 GB
+    8000.hdf5 0.8 GB
+    
+    A description of the structure generation procedure is available in the paper 
+    related to this dataset.  Each HDF5 file contains information about the molecular 
+    properties of equilibrium and non-equilibrium   conformations of small molecules
+    composed of up to seven heavy atoms (C, N, O, S, Cl). For instance, you can access
+    to the information saved in the 1000.hdf5 file as,
+
+    fDFT = h5py.File('1000.hdf5', 'r')
+    fDFT[idmol]: idmol, ID number of molecule (e.g., '1', '100', '94')
+    fDFT[idmol][idconf]: idconf, ID configuration (e.g., 'Geom-m1-i1-c1-opt', 'Geom-m1-i1-c1-50')
+
+    The idconf label has the general form "Geom-mr-is-ct-u", were r enumerated the
+    SMILES strings, s the stereoisomers excluding conformers, t the considered
+    (meta)stable conformers, and u the optimized/displaced structures; u = opt
+    indicates the DFTB3+MBD optimized structures and u = 1,...,100 enumerates
+    the displaced non-equilibrium structures. Note that these indices are not
+    sorted according to their PBE0+MBD relative energies.
+
+    Then, for each structure (i.e., idconf), you will find the following properties:
+
+    -'atNUM': Atomic numbers (N)
+    -'atXYZ': Atoms coordinates [Ang] (Nx3)
+    -'sRMSD': RMSD to optimized structure [Ang] (1)
+    -'sMIT': Momente of inertia tensor [amu.Ang^2] (9)
+
+    -'ePBE0+MBD': Total PBE0+MBD energy [eV] (1)
+    -'eDFTB+MBD': Total DFTB+MBD energy [eV] (1)
+    -'eAT': PBE0 atomization energy [eV] (1)
+    -'ePBE0': PBE0 energy [eV] (1)
+    -'eMBD': MBD energy [eV] (1)
+    -'eTS': TS dispersion energy [eV] (1)
+    -'eNN': Nuclear-nuclear repulsion energy [eV] (1)
+    -'eKIN': Kinetic energy [eV] (1)
+    -'eNE': Nuclear-electron attracttion [eV] (1)
+    -'eEE': Classical coulomb energy (el-el) [eV] (1)
+    -'eXC': Exchange-correlation energy [eV] (1)
+    -'eX': Exchange energy [eV] (1)
+    -'eC': Correlation energy [eV] (1)
+    -'eXX': Exact exchange energy [eV] (1)
+    -'eKSE': Sum of Kohn-Sham eigenvalues [eV] (1)
+    -'KSE': Kohn-Sham eigenvalues [eV] (depends on the molecule)
+    -'eH': HOMO energy [eV] (1)
+    -'eL': LUMO energy [eV] (1)
+    -'HLgap': HOMO-LUMO gap [eV] (1)
+    -'DIP': Total dipole moment [e.Ang] (1)
+    -'vDIP': Dipole moment components [e.Ang] (3)
+    -'vTQ': Total quadrupole moment components [e.Ang^2] (3)
+    -'vIQ': Ionic quadrupole moment components [e.Ang^2] (3)
+    -'vEQ': Electronic quadrupole moment components [eAng^2] (3)
+    -'mC6': Molecular C6 coefficient [hartree.bohr^6] (computed using SCS) (1)
+    -'mPOL': Molecular polarizability [bohr^3] (computed using SCS) (1)
+    -'mTPOL': Molecular polarizability tensor [bohr^3] (9)
+
+    -'totFOR': Total PBE0+MBD atomic forces (unitary forces cleaned) [eV/Ang] (Nx3)
+    -'vdwFOR': MBD atomic forces [eV/Ang] (Nx3)
+    -'pbe0FOR': PBE0 atomic forces [eV/Ang] (Nx3)
+    -'hVOL': Hirshfeld volumes [bohr^3] (N)
+    -'hRAT': Hirshfeld ratios (N)
+    -'hCHG': Hirshfeld charges [e] (N)
+    -'hDIP': Hirshfeld dipole moments [e.bohr] (N)
+    -'hVDIP': Components of Hirshfeld dipole moments [e.bohr] (Nx3)
+    -'atC6': Atomic C6 coefficients [hartree.bohr^6] (N)
+    -'atPOL': Atomic polarizabilities [bohr^3] (N)
+    -'vdwR': van der Waals radii [bohr] (N)
+    """
+    set_ids = ['1000', '2000', '3000', '4000', '5000', '6000', '7000', '8000']
+    
+    properties = ['DIP','HLgap','KSE','atC6','atNUM','atPOL','atXYZ','eAT', 
+                  'eC','eDFTB+MBD','eEE','eH','eKIN','eKSE','eL','eMBD','eNE', 
+                  'eNN','ePBE0','ePBE0+MBD','eTS','eX','eXC','eXX','hCHG', 
+                  'hDIP','hRAT','hVDIP','hVOL','mC6','mPOL','mTPOL','pbe0FOR', 
+                  'sMIT','sRMSD','totFOR','vDIP','vEQ','vIQ','vTQ','vdwFOR','vdwR']
+    
+    def __init__(self, in_dir='./QM7X/'):
+        self.ds_idx = []
+        self.embeddings = [] 
+        self.load_data(in_dir)
+         
+    def __getitem__(self, i):
+        j = i // 1000
+        file = self.files[j]
+        mol = file[str(i)]
+        return mol
+         
+    def __len__(self):
+        return len(self.ds_idx)
+    
+    def load_data(self, in_dir):
+        self.files = []
+        for set_id in QM7X.set_ids:
+            f = h5py.File(in_dir+set_id+'.hdf5', 'r')
+            self.ds_idx.extend(list(map(int, f.keys())))
+            self.files.append(f)
+        print('molecular formula loaded: ', len(self.ds_idx))
+    
+    @classmethod
+    def map_dataset(self, in_dir='./QM7X/', selector=[]):
+        """seletor = list of regular expression strings (attr) for searching the idconf keys
+        returns mols[idmol] = [idconf,idconf,...]
+        idconf, ID configuration (e.g., 'Geom-m1-i1-c1-opt', 'Geom-m1-i1-c1-50')
+        """
+        mols = {}
+        structure_count = 0
+        for set_id in QM7X.set_ids:
+            f = h5py.File(in_dir+set_id+'.hdf5', 'r')
+            print('opening... ', f)
+            for idmol in f:
+                mols[idmol] = []
+                for idconf in f[idmol]:
+                    for attr in selector:
+                        if re.search(attr, idconf):
+                            mols[idmol].append(idconf)
+                            structure_count += 1
+                if mols[idmol] == []: del mols[idmol]
+                    
+        print('molecular formula (idmol) selected: ', len(mols))
+        print('total molecular structures (idconf) selected: ', structure_count)
+        return mols
+        
 class QM7(QDataset):
     """http://quantum-machine.org/datasets/
     This dataset is a subset of GDB-13 (a database of nearly 1 billion stable 
@@ -364,7 +497,6 @@ class QM9(QDataset):
         feats = []
         for fea in self.features:
             feats.append(load_feature(fea))
-       
         x_con = np.concatenate(feats, axis=0)
         y = load_feature(self.target)
         
@@ -481,15 +613,15 @@ class Champs(QDataset):
        
         if use_h5:
             print('creating Champs h5 dataset...')
-            with h5py.File(in_dir+'champs_cat.h5', 'w') as h5p:
+            with h5py.File(in_dir+'champs_cat.h5', 'w') as f:
                 # index in with empty tuple [()]
-                cat_ds = h5p.create_dataset('x_cat', data=cat_ds, chunks=True)[()] 
-            with h5py.File(in_dir+'champs_con.h5', 'w') as h5p:
-                con_ds = h5p.create_dataset('x_con', data=con_ds, chunks=True)[()]
-            with h5py.File(in_dir+'champs_target.h5', 'w') as h5p:
-                target_ds = h5p.create_dataset('target', data=target_ds, chunks=True)[()]
-            with h5py.File(in_dir+'champs_lookup.h5', 'w') as h5p:
-                self.lookup = h5p.create_dataset('lookup', data=lookup, chunks=True)[()]
+                cat_ds = f.create_dataset('x_cat', data=cat_ds, chunks=True)[()] 
+            with h5py.File(in_dir+'champs_con.h5', 'w') as f:
+                con_ds = f.create_dataset('x_con', data=con_ds, chunks=True)[()]
+            with h5py.File(in_dir+'champs_target.h5', 'w') as f:
+                target_ds = f.create_dataset('target', data=target_ds, chunks=True)[()]
+            with h5py.File(in_dir+'champs_lookup.h5', 'w') as f:
+                self.lookup = f.create_dataset('lookup', data=lookup, chunks=True)[()]
         else: 
             self.lookup = lookup
 

@@ -44,9 +44,14 @@ https://arxiv.org/abs/1812.05055
 
 QM7-X: A comprehensive dataset of quantum-mechanical properties spanning the chemical space of small organic molecules  
 https://arxiv.org/abs/2006.15139
+https://zenodo.org/record/3905361
 
 The ANI-1ccx and ANI-1x data sets, coupled-cluster and density functional theory properties for molecules  
 https://www.nature.com/articles/s41597-020-0473-z
+
+Set Transformer: A Framework for Attention-based Permutation-Invariant Neural Networks
+https://arxiv.org/abs/1810.00825
+https://github.com/juho-lee/set_transformer
 
 https://www.kaggle.com/c/champs-scalar-coupling
 
