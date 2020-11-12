@@ -234,8 +234,8 @@ class QM7X(QDataset):
                   'hDIP','hRAT','hVDIP','hVOL','mC6','mPOL','mTPOL','pbe0FOR', 
                   'sMIT','sRMSD','totFOR','vDIP','vEQ','vIQ','vTQ','vdwFOR','vdwR']
     
-    def __init__(self, features=[], target=[], in_dir='./QM7X/', selector=['opt']):
-        self.features, self.target = features, target
+    def __init__(self, features=[], target=[], dim=0, in_dir='../QM7X/', selector=['i1-c1-opt']):
+        self.features, self.target, self.dim = features, target, dim
         self.embeddings = []
         self.datamap = QM7X.map_dataset(in_dir, selector)
         self.ds_idx = list(map(int, self.datamap.keys()))
@@ -244,15 +244,20 @@ class QM7X(QDataset):
     def __getitem__(self, i):
         features = []
         target = []
-        j = i // 1000  # select the correct h5 file
-        file = self.h5_files[j]
+        # select the correct h5 file
+        if i == 1: j = i
+        else: j = i-1
+        k = j // 1000  
+        file = self.h5_files[k]
         mol = file[str(i)][self.datamap[str(i)][0]]
         for f in self.features:
-            features.append(np.reshape(mol[f][()], -1))
+            features.append(np.reshape(mol[f][()], -1).astype(np.float32))
+            feats = np.concatenate(features)
+            
         for t in self.target:
             target.append(np.reshape(mol[t][()], -1))
             
-        return as_tensor(np.concatenate(features)), [], as_tensor(np.concatenate(target))
+        return as_tensor(np.pad(feats, (0, (self.dim - len(feats))))), [], as_tensor(np.concatenate(target))
          
     def __len__(self):
         return len(self.ds_idx)
