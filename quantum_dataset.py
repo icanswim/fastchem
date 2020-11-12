@@ -234,21 +234,25 @@ class QM7X(QDataset):
                   'hDIP','hRAT','hVDIP','hVOL','mC6','mPOL','mTPOL','pbe0FOR', 
                   'sMIT','sRMSD','totFOR','vDIP','vEQ','vIQ','vTQ','vdwFOR','vdwR']
     
-    def __init__(self, target, features, in_dir='./QM7X/', selector=['opt']):
+    def __init__(self, features=[], target=[], in_dir='./QM7X/', selector=['opt']):
+        self.features, self.target = features, target
         self.embeddings = []
         self.datamap = QM7X.map_dataset(in_dir, selector)
         self.ds_idx = list(map(int, self.datamap.keys()))
         self.load_data(in_dir)
          
     def __getitem__(self, i):
-        out = []
+        features = []
+        target = []
         j = i // 1000  # select the correct h5 file
         file = self.h5_files[j]
         mol = file[str(i)][self.datamap[str(i)][0]]
-        for p in QM7X.properties:
-            out.append(mol[p][()])
+        for f in self.features:
+            features.append(np.reshape(mol[f][()], -1))
+        for t in self.target:
+            target.append(np.reshape(mol[t][()], -1))
             
-        return out
+        return as_tensor(np.concatenate(features)), [], as_tensor(np.concatenate(target))
          
     def __len__(self):
         return len(self.ds_idx)
