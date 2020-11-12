@@ -234,30 +234,34 @@ class QM7X(QDataset):
                   'hDIP','hRAT','hVDIP','hVOL','mC6','mPOL','mTPOL','pbe0FOR', 
                   'sMIT','sRMSD','totFOR','vDIP','vEQ','vIQ','vTQ','vdwFOR','vdwR']
     
-    def __init__(self, in_dir='./QM7X/'):
-        self.ds_idx = []
-        self.embeddings = [] 
+    def __init__(self, target, features, in_dir='./QM7X/', selector=['opt']):
+        self.embeddings = []
+        self.datamap = QM7X.map_dataset(in_dir, selector)
+        self.ds_idx = list(map(int, self.datamap.keys()))
         self.load_data(in_dir)
          
     def __getitem__(self, i):
-        j = i // 1000
-        file = self.files[j]
-        mol = file[str(i)]
-        return mol
+        out = []
+        j = i // 1000  # select the correct h5 file
+        file = self.h5_files[j]
+        mol = file[str(i)][self.datamap[str(i)][0]]
+        for p in QM7X.properties:
+            out.append(mol[p][()])
+            
+        return out
          
     def __len__(self):
         return len(self.ds_idx)
     
     def load_data(self, in_dir):
-        self.files = []
+        self.h5_files = []
         for set_id in QM7X.set_ids:
             f = h5py.File(in_dir+set_id+'.hdf5', 'r')
-            self.ds_idx.extend(list(map(int, f.keys())))
-            self.files.append(f)
+            self.h5_files.append(f)
         print('molecular formula loaded: ', len(self.ds_idx))
     
     @classmethod
-    def map_dataset(self, in_dir='./QM7X/', selector=[]):
+    def map_dataset(cls, in_dir='./QM7X/', selector=[]):
         """seletor = list of regular expression strings (attr) for searching the idconf keys
         returns mols[idmol] = [idconf,idconf,...]
         idconf, ID configuration (e.g., 'Geom-m1-i1-c1-opt', 'Geom-m1-i1-c1-50')
@@ -265,16 +269,16 @@ class QM7X(QDataset):
         mols = {}
         structure_count = 0
         for set_id in QM7X.set_ids:
-            f = h5py.File(in_dir+set_id+'.hdf5', 'r')
-            print('opening... ', f)
-            for idmol in f:
-                mols[idmol] = []
-                for idconf in f[idmol]:
-                    for attr in selector:
-                        if re.search(attr, idconf):
-                            mols[idmol].append(idconf)
-                            structure_count += 1
-                if mols[idmol] == []: del mols[idmol]
+            with h5py.File(in_dir+set_id+'.hdf5', 'r') as f:
+                print('opening... ', f)
+                for idmol in f:
+                    mols[idmol] = []
+                    for idconf in f[idmol]:
+                        for attr in selector:
+                            if re.search(attr, idconf):
+                                mols[idmol].append(idconf)
+                                structure_count += 1
+                    if mols[idmol] == []: del mols[idmol]
                     
         print('molecular formula (idmol) selected: ', len(mols))
         print('total molecular structures (idconf) selected: ', structure_count)
