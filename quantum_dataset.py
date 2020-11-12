@@ -234,22 +234,24 @@ class QM7X(QDataset):
                   'hDIP','hRAT','hVDIP','hVOL','mC6','mPOL','mTPOL','pbe0FOR', 
                   'sMIT','sRMSD','totFOR','vDIP','vEQ','vIQ','vTQ','vdwFOR','vdwR']
     
+    #due to indexing, only able to select one conformation/structure/idconf per formula/molecule/molid
+    #TODO flatten datamap dict to allow multiple conformations per formula
     def __init__(self, features=[], target=[], dim=0, in_dir='../QM7X/', selector=['i1-c1-opt']):
         self.features, self.target, self.dim = features, target, dim
         self.embeddings = []
         self.datamap = QM7X.map_dataset(in_dir, selector)
-        self.ds_idx = list(map(int, self.datamap.keys()))
+        self.ds_idx = self.datamap.keys()
         self.load_data(in_dir)
          
     def __getitem__(self, i):
         features = []
         target = []
-        # select the correct h5 file
+        # select the correct h5 handle
         if i == 1: j = i
         else: j = i-1
         k = j // 1000  
-        file = self.h5_files[k]
-        mol = file[str(i)][self.datamap[str(i)][0]]
+        handle = self.h5_handles[k]
+        mol = handle[str(i)][self.datamap[i][0]]
         for f in self.features:
             features.append(np.reshape(mol[f][()], -1).astype(np.float32))
             feats = np.concatenate(features)
@@ -257,21 +259,23 @@ class QM7X(QDataset):
         for t in self.target:
             target.append(np.reshape(mol[t][()], -1))
             
-        return as_tensor(np.pad(feats, (0, (self.dim - len(feats))))), [], as_tensor(np.concatenate(target))
+        return as_tensor(np.pad(feats, (0, (self.dim - len(feats))))), [], \
+                        as_tensor(np.concatenate(target))
          
     def __len__(self):
         return len(self.ds_idx)
     
     def load_data(self, in_dir):
-        self.h5_files = []
+        self.h5_handles = []
         for set_id in QM7X.set_ids:
-            f = h5py.File(in_dir+set_id+'.hdf5', 'r')
-            self.h5_files.append(f)
+            handle = h5py.File(in_dir+set_id+'.hdf5', 'r')
+            self.h5_handles.append(handle)
         print('molecular formula loaded: ', len(self.ds_idx))
     
     @classmethod
     def map_dataset(cls, in_dir='./QM7X/', selector=[]):
-        """seletor = list of regular expression strings (attr) for searching the idconf keys
+        """seletor = list of regular expression strings (attr) for searching 
+        and selecting idconf keys.  
         returns mols[idmol] = [idconf,idconf,...]
         idconf, ID configuration (e.g., 'Geom-m1-i1-c1-opt', 'Geom-m1-i1-c1-50')
         """
@@ -281,16 +285,16 @@ class QM7X(QDataset):
             with h5py.File(in_dir+set_id+'.hdf5', 'r') as f:
                 print('opening... ', f)
                 for idmol in f:
-                    mols[idmol] = []
+                    mols[int(idmol)] = []
                     for idconf in f[idmol]:
                         for attr in selector:
                             if re.search(attr, idconf):
-                                mols[idmol].append(idconf)
+                                mols[int(idmol)].append(idconf)
                                 structure_count += 1
-                    if mols[idmol] == []: del mols[idmol]
+                    if mols[int(idmol)] == []: del mols[int(idmol)]
                     
-        print('molecular formula (idmol) selected: ', len(mols))
-        print('total molecular structures (idconf) selected: ', structure_count)
+        print('molecular formula (idmol) mapped: ', len(mols))
+        print('total molecular structures (idconf) mapped: ', structure_count)
         return mols
         
 class QM7(QDataset):
