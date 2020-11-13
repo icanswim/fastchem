@@ -247,7 +247,7 @@ class QM7X(QDataset):
         features = []
         target = []
         # select the correct h5 handle
-        if i == 1: j = i
+        if i == 1: j = 1
         else: j = i-1
         k = j // 1000  
         handle = self.h5_handles[k]
@@ -500,20 +500,20 @@ class QM9(QDataset):
         mol = self.datadic[idx]
         
         def load_feature(feature):
-            if fea == 'coulomb': 
+            if feature == 'coulomb': 
                 flat = np.reshape(mol.coulomb, -1)
                 return np.pad(flat, (0, self.dim**2-len(mol.coulomb)**2))
-            elif fea == 'mulliken':
+            elif feature == 'mulliken':
                 return np.pad(mol.mulliken, (0, self.dim-len(mol.mulliken)))
-            elif fea in QM9.properties: 
-                return np.reshape(np.asarray(mol.properties[QM9.properties.index(fea)],
+            elif feature in QM9.properties: 
+                return np.reshape(np.asarray(mol.properties[QM9.properties.index(feature)],
                                                                    dtype=np.float32), -1)
             else: 
-                return np.reshape(np.asarray(getattr(mol, fea), dtype=np.float32), -1)
+                return np.reshape(np.asarray(getattr(mol, feature), dtype=np.float32), -1)
                 
         feats = []
-        for fea in self.features:
-            feats.append(load_feature(fea))
+        for feature in self.features:
+            feats.append(load_feature(feature))
         x_con = np.concatenate(feats, axis=0)
         y = load_feature(self.target)
         
