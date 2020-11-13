@@ -144,6 +144,61 @@ class QDataset(Dataset, ABC):
     def load_data(self):
         return data
 
+class ANI1(QDataset):
+    """https://www.nature.com/articles/s41597-020-0473-z#Sec11
+    https://github.com/aiqm/ANI1x_datasets
+    https://springernature.figshare.com/articles/dataset/ANI-1x_Dataset_Release/10047041
+    """
+    properties = ['atomic_numbers', 'ccsd(t)_cbs.energy', 'coordinates', 'hf_dz.energy',
+                  'hf_qz.energy', 'hf_tz.energy', 'mp2_dz.corr_energy', 'mp2_qz.corr_energy',
+                  'mp2_tz.corr_energy', 'npno_ccsd(t)_dz.corr_energy', 'npno_ccsd(t)_tz.corr_energy',
+                  'tpno_ccsd(t)_dz.corr_energy', 'wb97x_dz.cm5_charges', 'wb97x_dz.dipole', 
+                  'wb97x_dz.energy', 'wb97x_dz.forces', 'wb97x_dz.hirshfeld_charges', 
+                  'wb97x_dz.quadrupole', 'wb97x_tz.dipole', 'wb97x_tz.energy', 'wb97x_tz.forces',
+                  'wb97x_tz.mbis_charges', 'wb97x_tz.mbis_dipoles', 'wb97x_tz.mbis_octupoles',
+                  'wb97x_tz.mbis_quadrupoles', 'wb97x_tz.mbis_volumes']
+    
+    def __init__(self, in_dir='./data/ani1/'):
+        self.load_data(in_dir)
+        self.embeddings = []  # [(n_vocab, len_vec, param.requires_grad),...]
+        self.ds_idx = []  # list of the dataset's indices
+    
+    def __getitem__(self, i):  # set X and y and do preprocessing here
+        # continuous, categorical, target.  empty list if none.
+        return as_tensor(x_con[i]), as_tensor(x_cat[i]), as_tensor(target[i])  
+    
+    def __len__(self):
+        return len(self.ds_idx)
+    
+    def load_data(h5filename, keys=['wb97x_dz.energy']):
+        """https://github.com/aiqm/ANI1x_datasets/blob/master/dataloader.py
+        Iterate over buckets of data in ANI HDF5 file. 
+        Yields dicts with atomic numbers (shape [Na,]) coordinated (shape [Nc, Na, 3])
+        and other available properties specified by `keys` list, w/o NaN values.
+        """
+        keys = set(keys)
+        keys.discard('atomic_numbers')
+        keys.discard('coordinates')
+        with h5py.File(h5filename, 'r') as f:
+            for grp in f.values():
+                Nc = grp['coordinates'].shape[0]
+                mask = np.ones(Nc, dtype=np.bool)
+                data = dict((k, grp[k][()]) for k in keys)
+                for k in keys:
+                    v = data[k].reshape(Nc, -1)
+                    mask = mask & ~np.isnan(v).any(axis=1)
+                if not np.sum(mask):
+                    continue
+                d = dict((k, data[k][mask]) for k in keys)
+                d['atomic_numbers'] = grp['atomic_numbers'][()]
+                d['coordinates'] = grp['coordinates'][()][mask]
+                yield d
+    
+    def explore_ds(self):
+        with h5py.File('./data/ani1/ani1x-release.h5', 'r') as f:
+            print(len(f.keys()))
+            print(f['C10H11N3O1'].keys())
+            
 class QM7X(QDataset):
     """QM7-X: A comprehensive dataset of quantum-mechanical properties spanning 
     the chemical space of small organic molecules
@@ -236,7 +291,7 @@ class QM7X(QDataset):
     
     #due to indexing, only able to select one conformation/structure/idconf per formula/molecule/molid
     #TODO flatten datamap dict to allow multiple conformations per formula
-    def __init__(self, features=[], target=[], dim=0, in_dir='../QM7X/', selector=['i1-c1-opt']):
+    def __init__(self, features=[], target=[], dim=0, in_dir='./data/qm7x/', selector=['i1-c1-opt']):
         self.features, self.target, self.dim = features, target, dim
         self.embeddings = []
         self.datamap = QM7X.map_dataset(in_dir, selector)
