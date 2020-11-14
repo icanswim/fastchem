@@ -170,34 +170,40 @@ class ANI1(QDataset):
     def __len__(self):
         return len(self.ds_idx)
     
-    def load_data(h5filename, keys=['wb97x_dz.energy']):
-        """https://github.com/aiqm/ANI1x_datasets/blob/master/dataloader.py
-        Iterate over buckets of data in ANI HDF5 file. 
-        Yields dicts with atomic numbers (shape [Na,]) coordinated (shape [Nc, Na, 3])
-        and other available properties specified by `keys` list, w/o NaN values.
+    def load_data(self):
+
+        self.datadic = AMI1.create_datadic(in_file, data_keys)
+                
+    @classmethod
+    def create_datadic(cls, in_file='./data/ani1/ani1x-release.h5',
+                          data_keys=['wb97x_dz.energy','wb97x_dz.forces']):
+        """data_keys = ['wb97x_dz.energy','wb97x_dz.forces'] 
+        # Original ANI-1x data (https://doi.org/10.1063/1.5023802)
+        data_keys = ['wb97x_tz.energy','wb97x_tz.forces'] 
+        # CHNO portion of the data set used in AIM-Net (https://doi.org/10.1126/sciadv.aav6490)
+        data_keys = ['ccsd(t)_cbs.energy'] 
+        # The coupled cluster ANI-1ccx data set (https://doi.org/10.1038/s41467-019-10827-4)
+        data_keys = ['wb97x_dz.dipoles'] 
+        # A subset of this data was used for training the ACA charge model 
+        (https://doi.org/10.1021/acs.jpclett.8b01939)
         """
-        keys = set(keys)
-        keys.discard('atomic_numbers')
-        keys.discard('coordinates')
-        with h5py.File(h5filename, 'r') as f:
-            for grp in f.values():
-                Nc = grp['coordinates'].shape[0]
-                mask = np.ones(Nc, dtype=np.bool)
-                data = dict((k, grp[k][()]) for k in keys)
-                for k in keys:
-                    v = data[k].reshape(Nc, -1)
-                    mask = mask & ~np.isnan(v).any(axis=1)
-                if not np.sum(mask):
-                    continue
-                d = dict((k, data[k][mask]) for k in keys)
-                d['atomic_numbers'] = grp['atomic_numbers'][()]
-                d['coordinates'] = grp['coordinates'][()][mask]
-                yield d
-    
-    def explore_ds(self):
-        with h5py.File('./data/ani1/ani1x-release.h5', 'r') as f:
-            print(len(f.keys()))
-            print(f['C10H11N3O1'].keys())
+        datadic = {}
+        with h5py.File(in_file, 'r') as f:
+            for mol in f.keys():
+                data = {}
+                for attr in data_keys:
+                    if np.isnan(f[mol][attr][()]).any():
+                        continue
+                    else:
+                        for attr in data_keys:
+                            data[attr] = f[mol][attr][()]
+                        for attr in ['atomic_numbers','coordinates']:
+                            data[attr] = f[mol][attr][()]
+                        datadic[mol] = data
+                    break
+                
+        return datadic
+                
             
 class QM7X(QDataset):
     """QM7-X: A comprehensive dataset of quantum-mechanical properties spanning 
