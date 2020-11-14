@@ -143,6 +143,7 @@ class QDataset(Dataset, ABC):
     @abstractmethod
     def load_data(self):
         return data
+    
 
 class ANI1(QDataset):
     """https://www.nature.com/articles/s41597-020-0473-z#Sec11
@@ -158,25 +159,38 @@ class ANI1(QDataset):
                   'wb97x_tz.mbis_charges', 'wb97x_tz.mbis_dipoles', 'wb97x_tz.mbis_octupoles',
                   'wb97x_tz.mbis_quadrupoles', 'wb97x_tz.mbis_volumes']
     
-    def __init__(self, in_dir='./data/ani1/'):
-        self.load_data(in_dir)
-        self.embeddings = []  # [(n_vocab, len_vec, param.requires_grad),...]
-        self.ds_idx = []  # list of the dataset's indices
+    def __init__(self, features=[], target=[], in_dir='./data/ani1/'):
+        self.load_data(in_dir, features, target)
+        self.embeddings = [] 
+        self.ds_idx = self.datadic.keys()
     
-    def __getitem__(self, i):  # set X and y and do preprocessing here
-        # continuous, categorical, target.  empty list if none.
-        return as_tensor(x_con[i]), as_tensor(x_cat[i]), as_tensor(target[i])  
+    def __getitem__(self, i):
+        feats = []
+        target = []
+        
+        mol = self.datadic[i]
+        for f in self.features:
+            feats.append(np.reshape(mol[f][()], -1).astype(np.float32))
+        features = np.concatenate(feats)
+        features = np.pad(feats, (0, (self.dim - len(features))))
+            
+        for t in self.target:
+            target.append(np.reshape(mol[self.target][()], -1))
+        target = np.concatenate(target)
+            
+        return as_tensor(features), [], as_tensor(target)
+    
     
     def __len__(self):
         return len(self.ds_idx)
     
-    def load_data(self):
-
+    def load_data(self, in_file, features, target):
         self.datadic = AMI1.create_datadic(in_file, data_keys)
                 
     @classmethod
     def create_datadic(cls, in_file='./data/ani1/ani1x-release.h5',
-                          data_keys=['wb97x_dz.energy','wb97x_dz.forces']):
+                          features=['atomic_numbers','coordinates','wb97x_dz.forces'],
+                          target=['wb97x_dz.energy']):
         """data_keys = ['wb97x_dz.energy','wb97x_dz.forces'] 
         # Original ANI-1x data (https://doi.org/10.1063/1.5023802)
         data_keys = ['wb97x_tz.energy','wb97x_tz.forces'] 
@@ -191,17 +205,14 @@ class ANI1(QDataset):
         with h5py.File(in_file, 'r') as f:
             for mol in f.keys():
                 data = {}
-                for attr in data_keys:
+                for attr in features+target:
                     if np.isnan(f[mol][attr][()]).any():
                         continue
                     else:
-                        for attr in data_keys:
-                            data[attr] = f[mol][attr][()]
-                        for attr in ['atomic_numbers','coordinates']:
+                        for attr in features+target:
                             data[attr] = f[mol][attr][()]
                         datadic[mol] = data
-                    break
-                
+                    break       
         return datadic
                 
             
@@ -305,7 +316,7 @@ class QM7X(QDataset):
         self.load_data(in_dir)
          
     def __getitem__(self, i):
-        features = []
+        feats = []
         target = []
         # select the correct h5 handle
         if i == 1: j = 1
@@ -314,14 +325,15 @@ class QM7X(QDataset):
         handle = self.h5_handles[k]
         mol = handle[str(i)][self.datamap[i][0]]
         for f in self.features:
-            features.append(np.reshape(mol[f][()], -1).astype(np.float32))
-            feats = np.concatenate(features)
+            feats.append(np.reshape(mol[f][()], -1).astype(np.float32))
+        features = np.concatenate(feats)
+        features = np.pad(feats, (0, (self.dim - len(features))))
             
         for t in self.target:
-            target.append(np.reshape(mol[t][()], -1))
+            target.append(np.reshape(mol[self.target][()], -1))
+        target = np.concatenate(target)
             
-        return as_tensor(np.pad(feats, (0, (self.dim - len(feats))))), [], \
-                        as_tensor(np.concatenate(target))
+        return as_tensor(features), [], as_tensor(target)
          
     def __len__(self):
         return len(self.ds_idx)
