@@ -124,10 +124,11 @@ class QM9Mol(Molecule):
         self.mulliken = np.concatenate(self.mulliken, axis=0)
         
 class QDataset(Dataset, ABC):
-    """An abstract base class for quantum datasets"""
+    """An abstract base class for quantum datasets
+    pad = length that all outputs will be padded to with zero"""
     @abstractmethod
-    def __init__(self, in_dir):
-        self.load_data(in_dir)
+    def __init__(self, in_file='./data/datafile'):
+        self.load_data(in_file)
         self.embeddings = []  # [(n_vocab, len_vec, param.requires_grad),...]
         self.ds_idx = []  # list of the dataset's indices
     
@@ -159,27 +160,28 @@ class ANI1(QDataset):
                   'wb97x_tz.mbis_charges', 'wb97x_tz.mbis_dipoles', 'wb97x_tz.mbis_octupoles',
                   'wb97x_tz.mbis_quadrupoles', 'wb97x_tz.mbis_volumes']
     
-    def __init__(self, features=[], target=[], in_dir='./data/ani1/'):
-        self.load_data(in_dir, features, target)
+    
+    def __init__(self, features=[], target=[], pad=None, in_file='./data/ani1/ani1x-release.h5'):
+        self.features, self.target, self.pad, self.in_file = features, target, pad, in_file
+        self.load_data(in_file, features, target)
         self.embeddings = [] 
         self.ds_idx = self.datadic.keys()
     
     def __getitem__(self, i):
-        feats = []
-        target = []
+        feats, target = [], []
         
         mol = self.datadic[i]
         for f in self.features:
-            feats.append(np.reshape(mol[f][()], -1).astype(np.float32))
+            feats.append(np.reshape(mol[f][()], -1).astype(np.float32)) #flattened
         features = np.concatenate(feats)
-        features = np.pad(feats, (0, (self.dim - len(features))))
-            
+        if self.pad:
+            features = np.pad(feats, (0, (self.pad - len(features))))
+        
         for t in self.target:
             target.append(np.reshape(mol[self.target][()], -1))
         target = np.concatenate(target)
             
         return as_tensor(features), [], as_tensor(target)
-    
     
     def __len__(self):
         return len(self.ds_idx)
@@ -188,9 +190,8 @@ class ANI1(QDataset):
         self.datadic = AMI1.create_datadic(in_file, data_keys)
                 
     @classmethod
-    def create_datadic(cls, in_file='./data/ani1/ani1x-release.h5',
-                          features=['atomic_numbers','coordinates','wb97x_dz.forces'],
-                          target=['wb97x_dz.energy']):
+    def create_datadic(cls,features=['atomic_numbers','coordinates','wb97x_dz.forces'],
+                          target=['wb97x_dz.energy'], in_file='./data/ani1/ani1x-release.h5':
         """data_keys = ['wb97x_dz.energy','wb97x_dz.forces'] 
         # Original ANI-1x data (https://doi.org/10.1063/1.5023802)
         data_keys = ['wb97x_tz.energy','wb97x_tz.forces'] 
@@ -308,8 +309,8 @@ class QM7X(QDataset):
     
     #due to indexing, only able to select one conformation/structure/idconf per formula/molecule/molid
     #TODO flatten datamap dict to allow multiple conformations per formula
-    def __init__(self, features=[], target=[], dim=0, in_dir='./data/qm7x/', selector=['i1-c1-opt']):
-        self.features, self.target, self.dim = features, target, dim
+    def __init__(self, features=[], target=[], pad=None, in_dir='./data/qm7x/', selector=['i1-c1-opt']):
+        self.features, self.target, self.pad, self.in_dir = features, target, pad, in_dir
         self.embeddings = []
         self.datamap = QM7X.map_dataset(in_dir, selector)
         self.ds_idx = self.datamap.keys()
@@ -327,7 +328,8 @@ class QM7X(QDataset):
         for f in self.features:
             feats.append(np.reshape(mol[f][()], -1).astype(np.float32))
         features = np.concatenate(feats)
-        features = np.pad(feats, (0, (self.dim - len(features))))
+        if self.pad:
+            features = np.pad(feats, (0, (self.pad - len(features))))
             
         for t in self.target:
             target.append(np.reshape(mol[self.target][()], -1))
@@ -346,7 +348,7 @@ class QM7X(QDataset):
         print('molecular formula loaded: ', len(self.ds_idx))
     
     @classmethod
-    def map_dataset(cls, in_dir='./QM7X/', selector=[]):
+    def map_dataset(cls, in_dir='./data/QM7X/', selector=[]):
         """seletor = list of regular expression strings (attr) for searching 
         and selecting idconf keys.  
         returns mols[idmol] = [idconf,idconf,...]
@@ -506,11 +508,11 @@ class QM9(QDataset):
                   'gap','r2','zpve','U0','U','H','G','Cv']
     
     def __init__(self, in_dir='./data/qm9/qm9.xyz/', n=133885, 
-                 features=[], target='', dim=29, use_pickle=True):
+                 features=[], target='', pad=29, use_pickle=True):
         """dim = length of longest molecule that all molecules will be padded to
         features/target = QM9.properties, 'coulomb', 'mulliken', QM9Mol.attr
         """
-        self.features, self.target, self.dim = features, target, dim
+        self.features, self.target, self.pad = features, target, pad
         self.datadic = self.load_data(in_dir, n, use_pickle)
         # filter here
         self.ds_idx = list(self.datadic.keys())
@@ -575,9 +577,15 @@ class QM9(QDataset):
         def load_feature(feature):
             if feature == 'coulomb': 
                 flat = np.reshape(mol.coulomb, -1)
-                return np.pad(flat, (0, self.dim**2-len(mol.coulomb)**2))
+                if self.pad:
+                       return np.pad(flat, (0, self.pad**2-len(mol.coulomb)**2))
+                else: 
+                       return flat
             elif feature == 'mulliken':
-                return np.pad(mol.mulliken, (0, self.dim-len(mol.mulliken)))
+                if self.pad:       
+                       return np.pad(mol.mulliken, (0, self.pad-len(mol.mulliken)))
+                else: 
+                       return mol.mulliken
             elif feature in QM9.properties: 
                 return np.reshape(np.asarray(mol.properties[QM9.properties.index(feature)],
                                                                    dtype=np.float32), -1)
