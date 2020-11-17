@@ -163,7 +163,7 @@ class ANI1(QDataset):
     
     def __init__(self, features=[], target=[], pad=None, in_file='./data/ani1/ani1x-release.h5'):
         self.features, self.target, self.pad, self.in_file = features, target, pad, in_file
-        self.load_data(in_file, features, target)
+        self.datadic = self.load_data(features, target, in_file)
         self.embeddings = [] 
         self.ds_idx = self.datadic.keys()
     
@@ -175,10 +175,10 @@ class ANI1(QDataset):
             feats.append(np.reshape(mol[f][()], -1).astype(np.float32)) #flattened
         features = np.concatenate(feats)
         if self.pad:
-            features = np.pad(feats, (0, (self.pad - len(features))))
+            features = np.pad(features, (0, (self.pad - len(features))))
         
         for t in self.target:
-            target.append(np.reshape(mol[self.target][()], -1))
+            target.append(np.reshape(mol[t][()], -1))
         target = np.concatenate(target)
             
         return as_tensor(features), [], as_tensor(target)
@@ -186,12 +186,7 @@ class ANI1(QDataset):
     def __len__(self):
         return len(self.ds_idx)
     
-    def load_data(self, in_file, features, target):
-        self.datadic = AMI1.create_datadic(in_file, data_keys)
-                
-    @classmethod
-    def create_datadic(cls,features=['atomic_numbers','coordinates','wb97x_dz.forces'],
-                          target=['wb97x_dz.energy'], in_file='./data/ani1/ani1x-release.h5':
+    def load_data(self, features, target, in_file):
         """data_keys = ['wb97x_dz.energy','wb97x_dz.forces'] 
         # Original ANI-1x data (https://doi.org/10.1063/1.5023802)
         data_keys = ['wb97x_tz.energy','wb97x_tz.forces'] 
@@ -210,10 +205,8 @@ class ANI1(QDataset):
                     if np.isnan(f[mol][attr][()]).any():
                         continue
                     else:
-                        for attr in features+target:
-                            data[attr] = f[mol][attr][()]
+                        data[attr] = f[mol][attr][()]    
                         datadic[mol] = data
-                    break       
         return datadic
                 
             
