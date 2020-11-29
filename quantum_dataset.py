@@ -150,6 +150,8 @@ class ANI1(QDataset):
     """https://www.nature.com/articles/s41597-020-0473-z#Sec11
     https://github.com/aiqm/ANI1x_datasets
     https://springernature.figshare.com/articles/dataset/ANI-1x_Dataset_Release/10047041
+    
+    
     """
     properties = ['atomic_numbers', 'ccsd(t)_cbs.energy', 'coordinates', 'hf_dz.energy',
                   'hf_qz.energy', 'hf_tz.energy', 'mp2_dz.corr_energy', 'mp2_qz.corr_energy',
@@ -500,7 +502,7 @@ class QM9(QDataset):
     
     def __init__(self, in_dir='./data/qm9/qm9.xyz/', n=133885, 
                  features=[], target='', pad=29, use_pickle=True):
-        """dim = length of longest molecule that all molecules will be padded to
+        """pad = length of longest molecule that all molecules will be padded to
         features/target = QM9.properties, 'coulomb', 'mulliken', QM9Mol.attr
         """
         self.features, self.target, self.pad = features, target, pad
