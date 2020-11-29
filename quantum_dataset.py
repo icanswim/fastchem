@@ -125,7 +125,7 @@ class QM9Mol(Molecule):
         
 class QDataset(Dataset, ABC):
     """An abstract base class for quantum datasets
-    pad = length that all outputs will be padded to with zero"""
+    pad = length that all outputs will be padded to with zeros"""
     @abstractmethod
     def __init__(self, in_file='./data/datafile'):
         self.load_data(in_file)
@@ -160,7 +160,6 @@ class ANI1(QDataset):
                   'wb97x_tz.mbis_charges', 'wb97x_tz.mbis_dipoles', 'wb97x_tz.mbis_octupoles',
                   'wb97x_tz.mbis_quadrupoles', 'wb97x_tz.mbis_volumes']
     
-    
     def __init__(self, features=[], target=[], pad=None, in_file='./data/ani1/ani1x-release.h5'):
         self.features, self.target, self.pad, self.in_file = features, target, pad, in_file
         self.datadic = self.load_data(features, target, in_file)
@@ -168,20 +167,19 @@ class ANI1(QDataset):
         self.ds_idx = self.datadic.keys()
     
     def __getitem__(self, i):
-        feats, target = [], []
+        features, targets = [], []
         
-        mol = self.datadic[i]
         for f in self.features:
-            feats.append(np.reshape(mol[f][()], -1).astype(np.float32)) #flattened
-        features = np.concatenate(feats)
+            features.append(np.reshape(self.datadic[i][f], -1).astype(np.float32)) #flattened
+        np.concatenate(features)
         if self.pad:
             features = np.pad(features, (0, (self.pad - len(features))))
         
         for t in self.target:
-            target.append(np.reshape(mol[t][()], -1))
-        target = np.concatenate(target)
+            targets.append(np.reshape(self.datadic[i][t], -1))
+        np.concatenate(targets)
             
-        return as_tensor(features), [], as_tensor(target)
+        return as_tensor(features), [], as_tensor(targets)
     
     def __len__(self):
         return len(self.ds_idx)
@@ -208,8 +206,8 @@ class ANI1(QDataset):
                         data[attr] = f[mol][attr][()]    
                         datadic[mol] = data
         return datadic
-                
-            
+
+                        
 class QM7X(QDataset):
     """QM7-X: A comprehensive dataset of quantum-mechanical properties spanning 
     the chemical space of small organic molecules
