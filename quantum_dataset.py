@@ -217,7 +217,7 @@ class QM7X(QDataset):
     https://zenodo.org/record/3905361
     
     decompress the .xz files in ./QM7X/
-    tar xvf 1000.xz
+    tar xvf *000.xz
     
     1000.hdf5 6.5 GB
     2000.hdf5 8.8 GB
@@ -325,7 +325,7 @@ class QM7X(QDataset):
             features = np.pad(feats, (0, (self.pad - len(features))))
             
         for t in self.target:
-            target.append(np.reshape(mol[self.target][()], -1))
+            target.append(np.reshape(mol[t][()], -1))
         target = np.concatenate(target)
             
         return as_tensor(features), [], as_tensor(target)
@@ -351,7 +351,7 @@ class QM7X(QDataset):
         structure_count = 0
         for set_id in QM7X.set_ids:
             with h5py.File(in_dir+set_id+'.hdf5', 'r') as f:
-                print('opening... ', f)
+                print('mapping... ', f)
                 for idmol in f:
                     mols[int(idmol)] = []
                     for idconf in f[idmol]:
