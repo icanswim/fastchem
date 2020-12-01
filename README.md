@@ -1,6 +1,16 @@
-## An exploration of the state of the art in Quantum Machine Learning.
+# An exploration of the state of the art in the use of  
+## machine learning in the modeling of molecular quantum mechanics.
 
-# Quantum datasets, models and learners for machine learning; implemented in pytorch.
+# Datasets, models and learners for machine learning; implemented in pytorch.
+
+pytorch = 1.6 cuda = 10.1
+
+see fastchem_setup.txt for implementation notes.
+
+see quantum_experiment.ipynb for examples.
+
+
+https://blog.paperspace.com/beginners-guide-to-quantum-machine-learning/
 
 Deep learning for molecular design - a review of the state of the art  
 https://arxiv.org/abs/1903.04388
@@ -57,8 +67,4 @@ https://www.kaggle.com/c/champs-scalar-coupling
 
 http://quantum-machine.org/datasets/
 
-pytorch = 1.6 cuda = 10.1
 
-see fastchem_setup.txt for implementation notes.
-
-see quantum_experiment.ipynb for examples.

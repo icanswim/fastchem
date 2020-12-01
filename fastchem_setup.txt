@@ -14,15 +14,22 @@ rdkit requires python=3.7
 pytorch requires cuda=10.1
 current gcp image is cuda=10.1 and pytorch=1.4 
 
-notes for conda jupyter notebook/lab implementation
-1. if using gcp you may need to enable third party extensions in gcp jupyter notebook Extension Manager options
-2. install nb_conda_kernels and ipykernel in the general conda environment  
-3. conda create --name fastchem --file conda_env_spec.txt
-4. may need to run conda install -c rdkit rdkit in notebook which installs an
-   updated certificate.  not sure whats the problem here.  TODO.
-5. if using gcp you may need to run python -m ipykernel install --user --name=fastchem #makes conda env
-   available as a notebook kernel
-6. create folders data logs and models in your project dir
-7. in the  data folder create the  dataset specific folder (qm9, qm7, champs).
+notes for conda jupyter lab implementation
+1. clone the fastchem repo
+        mkdir fastchem
+        cd fastchem
+        git clone https://github.com/icanswim/fastchem.git
+2. conda create --name fastchem --file conda_env_spec.txt
+3. install nb_conda_kernels and ipykernel in the general conda environment
+4. create folders 'data', 'logs' and 'models' in your fastchem dir
+5. in the  data folder create the dataset specific folder (qm9, qm7, champs, ect).
    this is the QDataset in_dir location where the load_data function will
-   look.  place your data here. 
+   look.  place your data here.
+6. from the fastchem dir activate the enviornment and launch the lab
+        conda activate fastchem 
+        jupyter lab
+  
+notes for google cloud platform (stale)
+1. if using gcp you may need to enable third party extensions in gcp jupyter notebook Extension Manager options 
+2. may need to run conda install -c rdkit rdkit in notebook which installs an updated certificate.
+3. may need to run python -m ipykernel install --user --name=fastchem which makes conda env available as a          notebook kernel
