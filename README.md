@@ -1,7 +1,7 @@
-# An exploration of the state of the art in the use of  
-## machine learning in the modeling of molecular quantum mechanics.
+## An exploration of the state of the art in the use of  
+# machine learning in the modeling of molecular quantum mechanics.
 
-# Datasets, models and learners for machine learning; implemented in pytorch.
+## Datasets, models and learners for machine learning; implemented in pytorch.
 
 pytorch = 1.6 cuda = 10.1
 
@@ -9,6 +9,9 @@ see fastchem_setup.txt for implementation notes.
 
 see quantum_experiment.ipynb for examples.
 
+### TODO message passing network, encoder/decoder, embeddings, attention
+
+### References
 
 https://blog.paperspace.com/beginners-guide-to-quantum-machine-learning/
 
