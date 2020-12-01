@@ -9,7 +9,7 @@ see fastchem_setup.txt for implementation notes.
 
 see quantum_experiment.ipynb for examples.
 
-TODO message passing network, encoder/decoder, embeddings, attention
+TODO message passing network, transformer, embeddings, attention
 
 ## References
 
@@ -51,6 +51,7 @@ https://github.com/materialsvirtuallab/megnet
 
 MoleculeNet: A Benchmark for Molecular Machine Learning  
 https://arxiv.org/abs/1703.00564
+https://github.com/deepchem/deepchem
 
 Graph Networks as a Universal Machine Learning Framework for Molecules and Crystals  
 https://arxiv.org/abs/1812.05055
