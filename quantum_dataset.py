@@ -64,8 +64,9 @@ class Molecule(ABC):
              
     def create_distance(self, xyz):
         m = np.zeros((len(xyz), 3))
+        # fix the scientific notation
         for i, atom in enumerate(xyz):
-            m[i,:] = [float(np.char.replace(x, '*^', 'e')) for x in atom[1:4]] # fix the scientific notation
+            m[i,:] = [float(np.char.replace(x, '*^', 'e')) for x in atom[1:4]] 
         self.distance = sp.distance.squareform(sp.distance.pdist(m)).astype('float32')
       
     def create_coulomb(self, distance, xyz, sigma=1):
@@ -125,7 +126,7 @@ class QM9Mol(Molecule):
         
 class QDataset(Dataset, ABC):
     """An abstract base class for quantum datasets
-    pad = length that all outputs will be padded to with zeros"""
+    """
     @abstractmethod
     def __init__(self, in_file='./data/datafile'):
         self.load_data(in_file)
@@ -146,40 +147,56 @@ class QDataset(Dataset, ABC):
         return data
     
 
-class ANI1(QDataset):
+class ANI1x(QDataset):
     """https://www.nature.com/articles/s41597-020-0473-z#Sec11
     https://github.com/aiqm/ANI1x_datasets
     https://springernature.figshare.com/articles/dataset/ANI-1x_Dataset_Release/10047041
     
+    The dataset is organized
+    [molecular formula][conformation index][feature]
+    
+    Indexed by a molecular formula and conformation index
+    Returns [features,features,...,padding], [target,target,...]
+    
+    criterion = the feature used to select the conformation
+    conformation = logic used on the criterion feature
+        'low' - choose the index with the lowest value
+        'high' - choose the index with the highest value
+        'random' - choose the index randomly
+        int - choose the index int
     
     """
-    properties = ['atomic_numbers', 'ccsd(t)_cbs.energy', 'coordinates', 'hf_dz.energy',
-                  'hf_qz.energy', 'hf_tz.energy', 'mp2_dz.corr_energy', 'mp2_qz.corr_energy',
-                  'mp2_tz.corr_energy', 'npno_ccsd(t)_dz.corr_energy', 'npno_ccsd(t)_tz.corr_energy',
-                  'tpno_ccsd(t)_dz.corr_energy', 'wb97x_dz.cm5_charges', 'wb97x_dz.dipole', 
-                  'wb97x_dz.energy', 'wb97x_dz.forces', 'wb97x_dz.hirshfeld_charges', 
-                  'wb97x_dz.quadrupole', 'wb97x_tz.dipole', 'wb97x_tz.energy', 'wb97x_tz.forces',
-                  'wb97x_tz.mbis_charges', 'wb97x_tz.mbis_dipoles', 'wb97x_tz.mbis_octupoles',
-                  'wb97x_tz.mbis_quadrupoles', 'wb97x_tz.mbis_volumes']
+    features = ['atomic_numbers', 'ccsd(t)_cbs.energy', 'coordinates', 'hf_dz.energy',
+                'hf_qz.energy', 'hf_tz.energy', 'mp2_dz.corr_energy', 'mp2_qz.corr_energy',
+                'mp2_tz.corr_energy', 'npno_ccsd(t)_dz.corr_energy', 'npno_ccsd(t)_tz.corr_energy',
+                'tpno_ccsd(t)_dz.corr_energy', 'wb97x_dz.cm5_charges', 'wb97x_dz.dipole', 
+                'wb97x_dz.energy', 'wb97x_dz.forces', 'wb97x_dz.hirshfeld_charges', 
+                'wb97x_dz.quadrupole', 'wb97x_tz.dipole', 'wb97x_tz.energy', 'wb97x_tz.forces',
+                'wb97x_tz.mbis_charges', 'wb97x_tz.mbis_dipoles', 'wb97x_tz.mbis_octupoles',
+                'wb97x_tz.mbis_quadrupoles', 'wb97x_tz.mbis_volumes']
     
-    def __init__(self, features=[], target=[], pad=None, in_file='./data/ani1/ani1x-release.h5'):
-        self.features, self.target, self.pad, self.in_file = features, target, pad, in_file
-        self.datadic = self.load_data(features, target, in_file)
+    def __init__(self, features=[], targets=[], pad=None, conformation='low', 
+                        criterion='wb97x_dz.energy', in_file='./data/ani1/ani1x-release.h5'):
+        self.features, self.targets = features, targets
+        self.conformation, self.criterion = conformation, criterion
+        self.in_file, self.pad = in_file, pad
+        self.datadic = self.load_data(features, targets, in_file)
         self.embeddings = [] 
         self.ds_idx = self.datadic.keys()
     
     def __getitem__(self, i):
-        features, targets = [], []
         
-        for f in self.features:
-            features.append(np.reshape(self.datadic[i][f], -1).astype(np.float32)) #flattened
-        np.concatenate(features)
+        def get_features(feature_list, dtype):
+            data = []
+            for f in feature_list:
+                data.append(np.reshape(self.datadic[i][f], -1).astype(dtype)) 
+            return np.concatenate(data)
+                
+        features = get_features(self.features, np.float32)
         if self.pad:
             features = np.pad(features, (0, (self.pad - len(features))))
         
-        for t in self.target:
-            targets.append(np.reshape(self.datadic[i][t], -1))
-        np.concatenate(targets)
+        targets = get_features(self.targets, np.float64)
             
         return as_tensor(features), [], as_tensor(targets)
     
@@ -205,11 +222,28 @@ class ANI1(QDataset):
                     if np.isnan(f[mol][attr][()]).any():
                         continue
                     else:
-                        data[attr] = f[mol][attr][()]    
+                        data[attr] = self.get_conformation(f[mol][attr][()])   
                         datadic[mol] = data
         return datadic
-
-                        
+    
+    def get_conformation(self, val):
+        
+        print('val.shape: ', val.shape)
+        if isinstance(self.conformation, int):
+            return val[self.conformation]
+        if isinstance(val[0], int): # atomic_numbers
+            return val 
+        if self.conformation == 'all':
+            return val
+        if self.conformation == 'random':
+            ci = random.randrange((val.shape[0]))
+        if self.conformation == 'max':
+            ci = np.argmax(val)
+        if self.conformation == 'min':
+            ci = np.argmin(val)
+        print('ci: ', ci)
+        return val[ci]
+                
 class QM7X(QDataset):
     """QM7-X: A comprehensive dataset of quantum-mechanical properties spanning 
     the chemical space of small organic molecules
@@ -301,7 +335,7 @@ class QM7X(QDataset):
                   'sMIT','sRMSD','totFOR','vDIP','vEQ','vIQ','vTQ','vdwFOR','vdwR']
     
     #due to indexing, only able to select one conformation/structure/idconf per formula/molecule/molid
-    #TODO flatten datamap dict to allow multiple conformations per formula
+    #TODO api for multiple conformations/flatten datamap dict to allow multiple conformations per formula
     def __init__(self, features=[], target=[], pad=None, in_dir='./data/qm7x/', selector=['i1-c1-opt']):
         self.features, self.target, self.pad, self.in_dir = features, target, pad, in_dir
         self.embeddings = []
