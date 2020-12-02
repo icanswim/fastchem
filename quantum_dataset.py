@@ -180,7 +180,7 @@ class ANI1x(QDataset):
         self.in_file, self.pad = in_file, pad
         self.datadic = self.load_data(features, targets, in_file)
         self.embeddings = [] 
-        self.ds_idx = self.datadic.keys()
+        self.ds_idx = list(self.datadic.keys())
     
     def __getitem__(self, i):
         
@@ -335,15 +335,16 @@ class QM7X(QDataset):
     
     #due to indexing, only able to select one conformation/structure/idconf per formula/molecule/molid
     #TODO api for multiple conformations/flatten datamap dict to allow multiple conformations per formula
-    def __init__(self, features=[], target=[], pad=None, in_dir='./data/qm7x/', selector=['i1-c1-opt']):
+    def __init__(self, features=['atNUM','atXYZ'], target=['eAT'], pad=None, 
+                         in_dir='./data/qm7x/', selector=['i1-c1-opt']):
         self.features, self.target, self.pad, self.in_dir = features, target, pad, in_dir
         self.embeddings = []
         self.datamap = QM7X.map_dataset(in_dir, selector)
-        self.ds_idx = self.datamap.keys()
+        self.ds_idx = list(self.datamap.keys())
         self.load_data(in_dir)
          
     def __getitem__(self, i):
-        feats = []
+        features = []
         target = []
         # select the correct h5 handle
         if i == 1: j = 1
@@ -352,10 +353,10 @@ class QM7X(QDataset):
         handle = self.h5_handles[k]
         mol = handle[str(i)][self.datamap[i][0]]
         for f in self.features:
-            feats.append(np.reshape(mol[f][()], -1).astype(np.float32))
-        features = np.concatenate(feats)
+            features.append(np.reshape(mol[f][()], -1).astype(np.float32))
+        features = np.concatenate(features)
         if self.pad:
-            features = np.pad(feats, (0, (self.pad - len(features))))
+            features = np.pad(features, (0, self.pad - len(features)))
             
         for t in self.target:
             target.append(np.reshape(mol[t][()], -1))
