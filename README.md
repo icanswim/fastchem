@@ -28,6 +28,10 @@ Ab initio solution of the many-electron Schrödinger equation with deep neural n
 https://journals.aps.org/prresearch/abstract/10.1103/PhysRevResearch.2.033429  
 https://github.com/deepmind/ferminet
 
+Set Transformer: A Framework for Attention-based Permutation-Invariant Neural Networks  
+https://arxiv.org/abs/1810.00825  
+https://github.com/juho-lee/set_transformer
+
 Machine Learning Force Fields  
 https://arxiv.org/abs/2010.07067
 
@@ -57,9 +61,9 @@ MoleculeNet: A Benchmark for Molecular Machine Learning
 https://arxiv.org/abs/1703.00564  
 https://github.com/deepchem/deepchem
 
-Set Transformer: A Framework for Attention-based Permutation-Invariant Neural Networks  
-https://arxiv.org/abs/1810.00825  
-https://github.com/juho-lee/set_transformer
+NetKet: A Machine Learning Toolkit for Many-Body Quantum Systems  
+https://arxiv.org/abs/1904.00031  
+https://github.com/netket/netket
 
 ### Datasets 
 
@@ -79,6 +83,3 @@ http://quantum-machine.org/datasets/
 A beginners guide to quantum machine learning  
 https://blog.paperspace.com/beginners-guide-to-quantum-machine-learning/
 
-NetKet: A Machine Learning Toolkit for Many-Body Quantum Systems  
-https://arxiv.org/abs/1904.00031  
-https://github.com/netket/netket
