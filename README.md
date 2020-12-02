@@ -13,7 +13,7 @@ TODO message passing network, transformer, embeddings, attention
 
 ## References
 
-AlphaFold
+AlphaFold  
 https://deepmind.com/blog/article/alphafold-a-solution-to-a-50-year-old-grand-challenge-in-biology
 
 https://blog.paperspace.com/beginners-guide-to-quantum-machine-learning/
@@ -53,7 +53,7 @@ https://arxiv.org/abs/1812.05055
 https://github.com/materialsvirtuallab/megnet
 
 MoleculeNet: A Benchmark for Molecular Machine Learning  
-https://arxiv.org/abs/1703.00564
+https://arxiv.org/abs/1703.00564  
 https://github.com/deepchem/deepchem
 
 Graph Networks as a Universal Machine Learning Framework for Molecules and Crystals  
