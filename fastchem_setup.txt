@@ -14,7 +14,7 @@ rdkit requires python=3.7
 pytorch requires cuda=10.1
 current gcp image is cuda=10.1 and pytorch=1.4 
 
-notes for conda jupyter lab implementation
+notes for jupyter lab implementation
 1. clone the fastchem repo
         mkdir fastchem
         cd fastchem

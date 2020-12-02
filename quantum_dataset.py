@@ -94,7 +94,6 @@ class Molecule(ABC):
         indexlist = np.argsort(noised)
         indexlist = indexlist[::-1]  # invert
         return matrix[indexlist][:,indexlist]
-
     
 class QM9Mol(Molecule):
     
@@ -145,7 +144,6 @@ class QDataset(Dataset, ABC):
     @abstractmethod
     def load_data(self):
         return data
-    
 
 class ANI1x(QDataset):
     """https://www.nature.com/articles/s41597-020-0473-z#Sec11
@@ -218,31 +216,32 @@ class ANI1x(QDataset):
         with h5py.File(in_file, 'r') as f:
             for mol in f.keys():
                 data = {}
+                ci = self.get_conformation_index(f[mol])
                 for attr in features+target:
-                    if np.isnan(f[mol][attr][()]).any():
+                    if np.isnan(f[mol][attr][()]).any(): 
                         continue
+                    elif attr == 'atomic_numbers':
+                        data[attr] = f[mol][attr][()]
+                        datadic[mol] = data
                     else:
-                        data[attr] = self.get_conformation(f[mol][attr][()])   
+                        data[attr] = f[mol][attr][ci]
                         datadic[mol] = data
         return datadic
     
-    def get_conformation(self, val):
+    def get_conformation_index(self, mol):
         
-        print('val.shape: ', val.shape)
         if isinstance(self.conformation, int):
-            return val[self.conformation]
-        if isinstance(val[0], int): # atomic_numbers
-            return val 
+            return self.conformation
         if self.conformation == 'all':
-            return val
+            return ()
         if self.conformation == 'random':
-            ci = random.randrange((val.shape[0]))
+            ci = random.randrange(mol[self.criterion].shape[0])
         if self.conformation == 'max':
-            ci = np.argmax(val)
+            ci = np.argmax(mol[self.criterion], axis=0)
         if self.conformation == 'min':
-            ci = np.argmin(val)
-        print('ci: ', ci)
-        return val[ci]
+            ci = np.argmin(mol[self.criterion], axis=0)
+                      
+        return ci
                 
 class QM7X(QDataset):
     """QM7-X: A comprehensive dataset of quantum-mechanical properties spanning 
