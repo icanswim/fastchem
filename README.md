@@ -1,15 +1,15 @@
-## An exploration of the state of the art in 
-## the use of machine learning for the modeling of 
+### An exploration of the state of the art in
+## the use of machine learning for the modeling of
 # Molecular Quantum Mechanics  
 
-## Datasets, models and learners for machine learning; implemented in pytorch 
+### Datasets, models and learners for machine learning; implemented in pytorch 
 * Designed to be light weight, modular and extentable
 * pytorch = 1.6 cuda = 10.1
 * see fastchem_setup.txt for implementation notes.
 * see quantum_experiment.ipynb for examples.
 * TODO message passing network, transformer, embeddings, attention
 
-## References 
+### References 
 
 AlphaFold  
 https://deepmind.com/blog/article/alphafold-a-solution-to-a-50-year-old-grand-challenge-in-biology
@@ -43,7 +43,7 @@ https://www.nature.com/articles/s41467-017-00839-3
 Solving Many-Electron Schrödinger Equation Using Deep Neural Networks  
 https://arxiv.org/abs/1807.07014
 
-# Chemistry Machine Learning Libraries
+### Chemistry Machine Learning Libraries
 
 SchNetPack: A Deep Learning Toolbox For Atomistic Systems  
 https://arxiv.org/abs/1809.01072  
@@ -61,7 +61,7 @@ Set Transformer: A Framework for Attention-based Permutation-Invariant Neural Ne
 https://arxiv.org/abs/1810.00825
 https://github.com/juho-lee/set_transformer
 
-# Datasets
+### Datasets
 
 QM7-X: A comprehensive dataset of quantum-mechanical properties spanning the chemical space of small organic molecules  
 https://arxiv.org/abs/2006.15139
@@ -74,7 +74,7 @@ https://www.kaggle.com/c/champs-scalar-coupling
 
 http://quantum-machine.org/datasets/  
 
-# Quantum Machine Learning  
+### Quantum Machine Learning  
 
 A beginners guide to quantum machine learning  
 https://blog.paperspace.com/beginners-guide-to-quantum-machine-learning/
