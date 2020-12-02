@@ -13,6 +13,9 @@ TODO message passing network, transformer, embeddings, attention
 
 ## References
 
+AlphaFold
+https://deepmind.com/blog/article/alphafold-a-solution-to-a-50-year-old-grand-challenge-in-biology
+
 https://blog.paperspace.com/beginners-guide-to-quantum-machine-learning/
 
 Deep learning for molecular design - a review of the state of the art  
@@ -70,5 +73,4 @@ https://github.com/juho-lee/set_transformer
 https://www.kaggle.com/c/champs-scalar-coupling
 
 http://quantum-machine.org/datasets/
-
 
