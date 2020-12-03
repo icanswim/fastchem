@@ -324,6 +324,11 @@ class QM7X(QDataset):
     -'atC6': Atomic C6 coefficients [hartree.bohr^6] (N)
     -'atPOL': Atomic polarizabilities [bohr^3] (N)
     -'vdwR': van der Waals radii [bohr] (N)
+    
+    seletor = list of regular expression strings (attr) for searching 
+        and selecting idconf keys.  
+        returns mols[idmol] = [idconf,idconf,...]
+        idconf, ID configuration (e.g., 'Geom-m1-i1-c1-opt', 'Geom-m1-i1-c1-50')
     """
     set_ids = ['1000', '2000', '3000', '4000', '5000', '6000', '7000', '8000']
     
@@ -333,8 +338,6 @@ class QM7X(QDataset):
                   'hDIP','hRAT','hVDIP','hVOL','mC6','mPOL','mTPOL','pbe0FOR', 
                   'sMIT','sRMSD','totFOR','vDIP','vEQ','vIQ','vTQ','vdwFOR','vdwR']
     
-    #due to indexing, only able to select one conformation/structure/idconf per formula/molecule/molid
-    #TODO api for multiple conformations/flatten datamap dict to allow multiple conformations per formula
     def __init__(self, features=['atNUM','atXYZ'], target=['eAT'], pad=None, 
                          in_dir='./data/qm7x/', selector=['i1-c1-opt']):
         self.features, self.target, self.pad, self.in_dir = features, target, pad, in_dir
@@ -351,7 +354,10 @@ class QM7X(QDataset):
         else: j = i-1
         k = j // 1000  
         handle = self.h5_handles[k]
-        mol = handle[str(i)][self.datamap[i][0]]
+        #given multiple conformations given a formula i one is randomly selected
+        conformations = self.datamap[i]
+        conformation = random.choice(conformations)
+        mol = handle[str(i)][conformation]
         for f in self.features:
             features.append(np.reshape(mol[f][()], -1).astype(np.float32))
         features = np.concatenate(features)
