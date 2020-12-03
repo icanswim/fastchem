@@ -1,5 +1,5 @@
-## An exploration of the state of the art in 
-## the use of machine learning in modeling 
+## An exploration of the state of the art in
+## the use of machine learning for modeling
 # Molecular Quantum Mechanics  
 
 ### Datasets, models and learners for machine learning; implemented in pytorch 
