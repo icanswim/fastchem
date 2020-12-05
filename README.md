@@ -49,6 +49,9 @@ https://arxiv.org/abs/1807.07014
 
 ### Chemistry Machine Learning Libraries 
 
+RDKit  
+https://www.rdkit.org/
+
 SchNetPack: A Deep Learning Toolbox For Atomistic Systems  
 https://arxiv.org/abs/1809.01072  
 https://github.com/atomistic-machine-learning/schnetpack
