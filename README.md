@@ -4,7 +4,7 @@
 
 ### Datasets, models and learners for machine learning; implemented in pytorch 
 * Designed to be light weight, modular and extentable
-* pytorch = 1.6 cuda = 10.1
+* pytorch=1.6 cuda=10.1
 * see fastchem_setup.txt for implementation notes.
 * see quantum_experiment.ipynb for examples.
 * TODO message passing network, transformer, embeddings, attention

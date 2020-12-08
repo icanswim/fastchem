@@ -62,12 +62,12 @@ class FFNet(nn.Module):
         # prepend a trainable adaptor layer    
         for l in self.ffunit(shape[0], shape[1], 0.2)[::-1]:
             self.layers.insert(0, l)
- 
-     
+    
+    
 class MAB(nn.Module):
-
+    """Multihead Attention Block"""
     def __init__(self, dim_Q, dim_K, dim_V, num_heads, ln=False):
-        super().__init__()
+        super(MAB, self).__init__()
         self.dim_V = dim_V
         self.num_heads = num_heads
         self.fc_q = nn.Linear(dim_Q, dim_V)
@@ -83,32 +83,30 @@ class MAB(nn.Module):
         K, V = self.fc_k(K), self.fc_v(K)
 
         dim_split = self.dim_V // self.num_heads
-        Q_ = cat(Q.split(dim_split, 2), 0)
-        K_ = cat(K.split(dim_split, 2), 0)
-        V_ = cat(V.split(dim_split, 2), 0)
+        Q_ = torch.cat(Q.split(dim_split, 2), 0)
+        K_ = torch.cat(K.split(dim_split, 2), 0)
+        V_ = torch.cat(V.split(dim_split, 2), 0)
 
-        A = softmax(Q_.bmm(K_.transpose(1,2))/sqrt(self.dim_V), 2)
-        O = cat((Q_ + A.bmm(V_)).split(Q.size(0), 0), 2)
+        A = torch.softmax(Q_.bmm(K_.transpose(1,2))/math.sqrt(self.dim_V), 2)
+        O = torch.cat((Q_ + A.bmm(V_)).split(Q.size(0), 0), 2)
         O = O if getattr(self, 'ln0', None) is None else self.ln0(O)
         O = O + F.relu(self.fc_o(O))
         O = O if getattr(self, 'ln1', None) is None else self.ln1(O)
         return O
 
-    
 class SAB(nn.Module):
-
+    """Set Attention Block"""
     def __init__(self, dim_in, dim_out, num_heads, ln=False):
-        super().__init__()
+        super(SAB, self).__init__()
         self.mab = MAB(dim_in, dim_in, dim_out, num_heads, ln=ln)
 
     def forward(self, X):
         return self.mab(X, X)
 
-    
 class ISAB(nn.Module):
-
+    """Induced Set Attention Block"""
     def __init__(self, dim_in, dim_out, num_heads, num_inds, ln=False):
-        super().__init__()
+        super(ISAB, self).__init__()
         self.I = nn.Parameter(torch.Tensor(1, num_inds, dim_out))
         nn.init.xavier_uniform_(self.I)
         self.mab0 = MAB(dim_out, dim_in, dim_out, num_heads, ln=ln)
@@ -118,9 +116,8 @@ class ISAB(nn.Module):
         H = self.mab0(self.I.repeat(X.size(0), 1, 1), X)
         return self.mab1(X, H)
 
-    
 class PMA(nn.Module):
-
+    """Pooling by Multihead Attention"""
     def __init__(self, dim, num_heads, num_seeds, ln=False):
         super(PMA, self).__init__()
         self.S = nn.Parameter(torch.Tensor(1, num_seeds, dim))
@@ -131,41 +128,11 @@ class PMA(nn.Module):
         return self.mab(self.S.repeat(X.size(0), 1, 1), X)
     
     
-class DeepSet(nn.Module):
-
-    def __init__(self, dim_input, num_outputs, dim_output, dim_hidden=128):
-        super(DeepSet, self).__init__()
-        self.num_outputs = num_outputs
-        self.dim_output = dim_output
-        self.enc = nn.Sequential(
-                nn.Linear(dim_input, dim_hidden),
-                nn.ReLU(),
-                nn.Linear(dim_hidden, dim_hidden),
-                nn.ReLU(),
-                nn.Linear(dim_hidden, dim_hidden),
-                nn.ReLU(),
-                nn.Linear(dim_hidden, dim_hidden))
-        self.dec = nn.Sequential(
-                nn.Linear(dim_hidden, dim_hidden),
-                nn.ReLU(),
-                nn.Linear(dim_hidden, dim_hidden),
-                nn.ReLU(),
-                nn.Linear(dim_hidden, dim_hidden),
-                nn.ReLU(),
-                nn.Linear(dim_hidden, num_outputs*dim_output))
-
-    def forward(self, X):
-        X = self.enc(X).mean(-2)
-        X = self.dec(X).reshape(-1, self.num_outputs, self.dim_output)
-        return X
-
-    
 class SetTransformer(nn.Module):
     """https://github.com/juho-lee/set_transformer"""
-
     def __init__(self, dim_input, num_outputs, dim_output,
-                    num_inds=32, dim_hidden=128, num_heads=4, ln=False):
-        super().__init__()
+            num_inds=32, dim_hidden=128, num_heads=4, ln=False):
+        super(SetTransformer, self).__init__()
         self.enc = nn.Sequential(
                 ISAB(dim_input, dim_hidden, num_heads, num_inds, ln=ln),
                 ISAB(dim_hidden, dim_hidden, num_heads, num_inds, ln=ln))

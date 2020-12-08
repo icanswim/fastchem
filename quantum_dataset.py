@@ -133,8 +133,10 @@ class QDataset(Dataset, ABC):
         self.ds_idx = []  # list of the dataset's indices
     
     @abstractmethod
-    def __getitem__(self, i):  # set X and y and do preprocessing here
-        # continuous, categorical, target.  empty list if none.
+    def __getitem__(self, i):
+        """set X and y and do preprocessing here
+        Return continuous, categorical, target.  empty list if none.
+        """
         return as_tensor(x_con[i]), as_tensor(x_cat[i]), as_tensor(target[i])  
     
     @abstractmethod
@@ -145,6 +147,172 @@ class QDataset(Dataset, ABC):
     def load_data(self):
         return data
 
+
+class QM9(QDataset):
+    """http://quantum-machine.org/datasets/
+   
+    dsgdb9nsd.xyz.tar.bz2    - 133885 molecules with properties in XYZ-like format
+    dsC7O2H10nsd.xyz.tar.bz2 - 6095 isomers of C7O2H10 with properties in XYZ-like format
+    validation.txt           - 100 randomly drawn molecules from the 133885 set with 
+                               enthalpies of formation
+    uncharacterized.txt      - 3054 molecules from the 133885 set that failed a consistency check
+    atomref.txt              - Atomic reference data
+    readme.txt               - Documentation
+
+    1          Number of atoms na
+    2          Properties 1-17 (see below)
+    3,...,na+2 Element type, coordinate (x,y,z) (Angstrom), and Mulliken partial charge (e) of atom
+    na+3       Frequencies (3na-5 or 3na-6)
+    na+4       SMILES from GDB9 and for relaxed geometry
+    na+5       InChI for GDB9 and for relaxed geometry
+
+    The properties stored in the second line of each file:
+
+    I.  Property  Unit         Description
+    --  --------  -----------  --------------
+     1  tag       -            "gdb9"; string constant to ease extraction via grep
+     2  index     -            Consecutive, 1-based integer identifier of molecule
+     3  A         GHz          Rotational constant A
+     4  B         GHz          Rotational constant B
+     5  C         GHz          Rotational constant C
+     6  mu        Debye        Dipole moment
+     7  alpha     Bohr^3       Isotropic polarizability
+     8  homo      Hartree      Energy of Highest occupied molecular orbital (HOMO)
+     9  lumo      Hartree      Energy of Lowest occupied molecular orbital (LUMO)
+    10  gap       Hartree      Gap, difference between LUMO and HOMO
+    11  r2        Bohr^2       Electronic spatial extent
+    12  zpve      Hartree      Zero point vibrational energy
+    13  U0        Hartree      Internal energy at 0 K
+    14  U         Hartree      Internal energy at 298.15 K
+    15  H         Hartree      Enthalpy at 298.15 K
+    16  G         Hartree      Free energy at 298.15 K
+    17  Cv        cal/(mol K)  Heat capacity at 298.15 K
+    
+    https://www.nature.com/articles/sdata201422
+    Quantum chemistry structures and properties of 134 kilo molecules
+    
+    https://arxiv.org/abs/1809.02723
+    Deep Neural Network Computes Electron Densities and Energies of a Large Set of 
+    Organic Molecules Faster than Density Functional Theory (DFT)
+    
+    https://arxiv.org/abs/1908.00971
+    Physical machine learning outperforms "human learning" in Quantum Chemistry
+    
+    """
+    LOW_CONVERGENCE = [21725,87037,59827,117523,128113,129053,129152, 
+                       129158,130535,6620,59818]
+    
+    properties = ['A','B','C','mu','alpha','homo','lumo', 
+                  'gap','r2','zpve','U0','U','H','G','Cv']
+    
+    def __init__(self, 
+                 in_dir='./data/qm9/qm9.xyz/', 
+                 n=133885, 
+                 features=[], 
+                 target='', 
+                 pad=29,
+                 filter_on=False,
+                 use_pickle=True):
+        """pad = length of longest molecule that all molecules will be padded to
+        features/target = QM9.properties, 'coulomb', 'mulliken', QM9Mol.attr
+        filter_on = ('attr', 'test', 'value')
+        n = non random subset selection (for testing)
+        """
+        self.features, self.target, self.pad = features, target, pad
+        self.datadic = self.load_data(in_dir, n, filter_on, use_pickle)
+        self.ds_idx = list(self.datadic.keys())
+        self.embeddings = []
+        self.x_cat = [] # no categorical features
+    
+    def __getitem__(self, i):
+        x_con, x_cat, y = self.load_mol(i)
+        return as_tensor(np.reshape(x_con, -1)), x_cat, \
+                    as_tensor(np.reshape(y, -1))
+        
+    def __len__(self):
+        return len(self.ds_idx)
+    
+    def open_file(self, in_file):
+        with open(in_file) as f:
+            data = []
+            for line in f.readlines():
+                data.append(line)
+            return data
+        
+    def load_data(self, in_dir, n, filter_on, use_pickle): 
+        
+        if os.path.exists('./data/qm9/'+use_pickle):
+            print('loading QM9 datadic from a pickled copy...')
+            datadic = pickle.load(open('./data/qm9/'+use_pickle, 'rb'))
+        else:
+            datadic = {}
+            for filename in sorted(os.listdir(in_dir)):
+                if filename.endswith('.xyz'):
+                    datadic[int(filename[-10:-4])] = QM9Mol(in_dir+filename)
+                    if filter_on:
+                        attr = str(getattr(datadic[int(filename[-10:-4])], filter_on[0]))
+                        print('attr: ', attr)
+                        if eval(attr+filter_on[1]+filter_on[2]):
+                            print('bing')
+                            del datadic[int(filename[-10:-4])]
+                        
+                    if len(datadic) % 10000 == 1: print('QM9 molecules created:', len(datadic))
+                    if len(datadic) > n - 1:
+                        break
+                       
+            unchar = self.get_uncharacterized()
+            for mol in unchar: 
+                try: del datadic[mol]
+                except: continue
+            print('total QM9 molecules created:', len(datadic))
+            
+            if use_pickle:
+                print('pickling a copy of the QM9 datadic...')        
+                pickle.dump(datadic, open('./data/qm9/'+use_pickle, 'wb'))
+                
+        return datadic
+    
+    def get_uncharacterized(self, in_file='./data/qm9/uncharacterized.txt'):
+        """uncharacterized.txt - 3054 molecules from the 133885 set that failed a 
+        consistency check.  Returns a list of ints of the 3054 molecules (datadic keys)"""
+        data = self.open_file(in_file)
+        unchar = []
+        for mol in data[8:]:
+            for m in mol.strip().split():
+                if m.isdigit():
+                    unchar.append(int(m))
+        return unchar
+    
+    def load_mol(self, idx):
+        mol = self.datadic[idx]
+        
+        def load_feature(feature):
+            if feature == 'coulomb': 
+                flat = np.reshape(mol.coulomb, -1)
+                if self.pad:
+                       return np.pad(flat, (0, self.pad**2-len(mol.coulomb)**2))
+                else: 
+                       return flat
+            elif feature == 'mulliken':
+                if self.pad:       
+                       return np.pad(mol.mulliken, (0, self.pad-len(mol.mulliken)))
+                else: 
+                       return mol.mulliken
+            elif feature in QM9.properties: 
+                return np.reshape(np.asarray(mol.properties[QM9.properties.index(feature)],
+                                                                   dtype=np.float32), -1)
+            else: 
+                return np.reshape(np.asarray(getattr(mol, feature), dtype=np.float32), -1)
+                
+        feats = []
+        for feature in self.features:
+            feats.append(load_feature(feature))
+        x_con = np.concatenate(feats, axis=0)
+        y = load_feature(self.target)
+        
+        return x_con, self.x_cat, y
+
+    
 class ANI1x(QDataset):
     """https://www.nature.com/articles/s41597-020-0473-z#Sec11
     https://github.com/aiqm/ANI1x_datasets
@@ -483,155 +651,7 @@ class QM7b(QDataset):
         self.ds_idx = list(range(self.coulomb.shape[0]))
          
         
-class QM9(QDataset):
-    """http://quantum-machine.org/datasets/
-   
-    dsgdb9nsd.xyz.tar.bz2    - 133885 molecules with properties in XYZ-like format
-    dsC7O2H10nsd.xyz.tar.bz2 - 6095 isomers of C7O2H10 with properties in XYZ-like format
-    validation.txt           - 100 randomly drawn molecules from the 133885 set with 
-                               enthalpies of formation
-    uncharacterized.txt      - 3054 molecules from the 133885 set that failed a consistency check
-    atomref.txt              - Atomic reference data
-    readme.txt               - Documentation
 
-    1          Number of atoms na
-    2          Properties 1-17 (see below)
-    3,...,na+2 Element type, coordinate (x,y,z) (Angstrom), and Mulliken partial charge (e) of atom
-    na+3       Frequencies (3na-5 or 3na-6)
-    na+4       SMILES from GDB9 and for relaxed geometry
-    na+5       InChI for GDB9 and for relaxed geometry
-
-    The properties stored in the second line of each file:
-
-    I.  Property  Unit         Description
-    --  --------  -----------  --------------
-     1  tag       -            "gdb9"; string constant to ease extraction via grep
-     2  index     -            Consecutive, 1-based integer identifier of molecule
-     3  A         GHz          Rotational constant A
-     4  B         GHz          Rotational constant B
-     5  C         GHz          Rotational constant C
-     6  mu        Debye        Dipole moment
-     7  alpha     Bohr^3       Isotropic polarizability
-     8  homo      Hartree      Energy of Highest occupied molecular orbital (HOMO)
-     9  lumo      Hartree      Energy of Lowest occupied molecular orbital (LUMO)
-    10  gap       Hartree      Gap, difference between LUMO and HOMO
-    11  r2        Bohr^2       Electronic spatial extent
-    12  zpve      Hartree      Zero point vibrational energy
-    13  U0        Hartree      Internal energy at 0 K
-    14  U         Hartree      Internal energy at 298.15 K
-    15  H         Hartree      Enthalpy at 298.15 K
-    16  G         Hartree      Free energy at 298.15 K
-    17  Cv        cal/(mol K)  Heat capacity at 298.15 K
-    
-    https://www.nature.com/articles/sdata201422
-    Quantum chemistry structures and properties of 134 kilo molecules
-    
-    https://arxiv.org/abs/1809.02723
-    Deep Neural Network Computes Electron Densities and Energies of a Large Set of 
-    Organic Molecules Faster than Density Functional Theory (DFT)
-    
-    https://arxiv.org/abs/1908.00971
-    Physical machine learning outperforms "human learning" in Quantum Chemistry
-    
-    """
-    LOW_CONVERGENCE = [21725,87037,59827,117523,128113,129053,129152, 
-                       129158,130535,6620,59818]
-    
-    properties = ['A','B','C','mu','alpha','homo','lumo', 
-                  'gap','r2','zpve','U0','U','H','G','Cv']
-    
-    def __init__(self, in_dir='./data/qm9/qm9.xyz/', n=133885, 
-                 features=[], target='', pad=29, use_pickle=True):
-        """pad = length of longest molecule that all molecules will be padded to
-        features/target = QM9.properties, 'coulomb', 'mulliken', QM9Mol.attr
-        """
-        self.features, self.target, self.pad = features, target, pad
-        self.datadic = self.load_data(in_dir, n, use_pickle)
-        # filter here
-        self.ds_idx = list(self.datadic.keys())
-        self.embeddings = []
-        self.x_cat = [] # no categorical features
-    
-    def __getitem__(self, i):
-        x_con, x_cat, y = self.load_mol(i)
-        return as_tensor(np.reshape(x_con, -1)), x_cat, \
-                    as_tensor(np.reshape(y, -1))
-        
-    def __len__(self):
-        return len(self.ds_idx)
-       
-    def open_file(self, in_file):
-        with open(in_file) as f:
-            data = []
-            for line in f.readlines():
-                data.append(line)
-            return data
-        
-    def load_data(self, in_dir, n, use_pickle): # n = non random subset selection (for testing)
-        
-        if os.path.exists('./data/qm9/qm9_datadic.p') and use_pickle:
-            print('loading QM9 datadic from a pickled copy...')
-            datadic = pickle.load(open('./data/qm9/qm9_datadic.p', 'rb'))
-        else:
-            datadic = {}
-            for filename in sorted(os.listdir(in_dir)):
-                if filename.endswith('.xyz'):
-                    datadic[int(filename[-10:-4])] = QM9Mol(in_dir+filename)
-                    if len(datadic) % 10000 == 1: print('QM9 molecules created:', len(datadic))
-                    if len(datadic) > n - 1:
-                        break
-                       
-            unchar = self.get_uncharacterized()
-            for mol in unchar: 
-                try: del datadic[mol]
-                except: continue
-            print('total QM9 molecules created:', len(datadic))
-            
-            if use_pickle:
-                print('pickling a copy of the QM9 datadic...')        
-                pickle.dump(datadic, open('./data/qm9/qm9_datadic.p', 'wb'))
-                
-        return datadic
-    
-    def get_uncharacterized(self, in_file='./data/qm9/uncharacterized.txt'):
-        """uncharacterized.txt - 3054 molecules from the 133885 set that failed a 
-        consistency check.  Returns a list of ints of the 3054 molecules (datadic keys)"""
-        data = self.open_file(in_file)
-        unchar = []
-        for mol in data[8:]:
-            for m in mol.strip().split():
-                if m.isdigit():
-                    unchar.append(int(m))
-        return unchar
-    
-    def load_mol(self, idx):
-        mol = self.datadic[idx]
-        
-        def load_feature(feature):
-            if feature == 'coulomb': 
-                flat = np.reshape(mol.coulomb, -1)
-                if self.pad:
-                       return np.pad(flat, (0, self.pad**2-len(mol.coulomb)**2))
-                else: 
-                       return flat
-            elif feature == 'mulliken':
-                if self.pad:       
-                       return np.pad(mol.mulliken, (0, self.pad-len(mol.mulliken)))
-                else: 
-                       return mol.mulliken
-            elif feature in QM9.properties: 
-                return np.reshape(np.asarray(mol.properties[QM9.properties.index(feature)],
-                                                                   dtype=np.float32), -1)
-            else: 
-                return np.reshape(np.asarray(getattr(mol, feature), dtype=np.float32), -1)
-                
-        feats = []
-        for feature in self.features:
-            feats.append(load_feature(feature))
-        x_con = np.concatenate(feats, axis=0)
-        y = load_feature(self.target)
-        
-        return x_con, self.x_cat, y
             
         
 class Champs(QDataset):
