@@ -212,7 +212,7 @@ class QM9(QDataset):
                  target='', 
                  pad=29,
                  filter_on=False,
-                 use_pickle=True):
+                 use_pickle='qm9_datadic.p'):
         """pad = length of longest molecule that all molecules will be padded to
         features/target = QM9.properties, 'coulomb', 'mulliken', QM9Mol.attr
         filter_on = ('attr', 'test', 'value')
@@ -250,10 +250,11 @@ class QM9(QDataset):
                 if filename.endswith('.xyz'):
                     datadic[int(filename[-10:-4])] = QM9Mol(in_dir+filename)
                     if filter_on:
-                        attr = str(getattr(datadic[int(filename[-10:-4])], filter_on[0]))
-                        print('attr: ', attr)
-                        if eval(attr+filter_on[1]+filter_on[2]):
-                            print('bing')
+                        val = self.load_feature(datadic[int(filename[-10:-4])], 
+                                                     filter_on[0])
+                        val = np.array2string(val, precision=4, floatmode='maxprec')[1:-1]
+                     
+                        if eval(val+filter_on[1]+filter_on[2]):
                             del datadic[int(filename[-10:-4])]
                         
                     if len(datadic) % 10000 == 1: print('QM9 molecules created:', len(datadic))
@@ -282,33 +283,33 @@ class QM9(QDataset):
                 if m.isdigit():
                     unchar.append(int(m))
         return unchar
-    
+        
+    def load_feature(self, mol, feature):
+        if feature == 'coulomb': 
+            flat = np.reshape(mol.coulomb, -1)
+            if self.pad:
+                   return np.pad(flat, (0, self.pad**2-len(mol.coulomb)**2))
+            else: 
+                   return flat
+        elif feature == 'mulliken':
+            if self.pad:       
+                   return np.pad(mol.mulliken, (0, self.pad-len(mol.mulliken)))
+            else: 
+                   return mol.mulliken
+        elif feature in QM9.properties: 
+            return np.reshape(np.asarray(mol.properties[QM9.properties.index(feature)],
+                                                               dtype=np.float32), -1)
+        else: 
+            return np.reshape(np.asarray(getattr(mol, feature), dtype=np.float32), -1)
+        
     def load_mol(self, idx):
         mol = self.datadic[idx]
-        
-        def load_feature(feature):
-            if feature == 'coulomb': 
-                flat = np.reshape(mol.coulomb, -1)
-                if self.pad:
-                       return np.pad(flat, (0, self.pad**2-len(mol.coulomb)**2))
-                else: 
-                       return flat
-            elif feature == 'mulliken':
-                if self.pad:       
-                       return np.pad(mol.mulliken, (0, self.pad-len(mol.mulliken)))
-                else: 
-                       return mol.mulliken
-            elif feature in QM9.properties: 
-                return np.reshape(np.asarray(mol.properties[QM9.properties.index(feature)],
-                                                                   dtype=np.float32), -1)
-            else: 
-                return np.reshape(np.asarray(getattr(mol, feature), dtype=np.float32), -1)
                 
         feats = []
         for feature in self.features:
-            feats.append(load_feature(feature))
+            feats.append(self.load_feature(mol, feature))
         x_con = np.concatenate(feats, axis=0)
-        y = load_feature(self.target)
+        y = self.load_feature(mol, self.target)
         
         return x_con, self.x_cat, y
 
