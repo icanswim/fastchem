@@ -1,39 +1,28 @@
+from abc import ABC, abstractmethod
 from torch import nn, cat, squeeze, softmax, Tensor
 from torch.nn import functional as F
 from math import sqrt
 
-class FFNet(nn.Module):
-    
-    model_config = {}
-    model_config['simple'] = {'shape': [('D_in',1),(1,1),(1,1/2),(1/2,'D_out')], 
-                              'dropout': [.2, .3, .1]}
-    model_config['funnel'] = {'shape': [('D_in',1),(1,1/2),(1/2,1/2),(1/2,1/4),(1/4,1/4),(1/4,'D_out')], 
-                              'dropout': [.1, .2, .3, .2, .1]}
 
-    def __init__(self, model_name='funnel', D_in=0, H=0, D_out=0, embeddings=[]):
-        super().__init__()
-        self.embeddings = [nn.Embedding(voc, vec).to('cuda:0') for voc, vec, _ in embeddings]
-        for i, e in enumerate(embeddings):
-            param = self.embeddings[i].weight
-            param.requires_grad = e[2]
-            
-        config = FFNet.model_config[model_name]
-        layers = []
-        layers.append(self.ffunit(D_in, int(config['shape'][0][1]*H), config['dropout'][0]))
-        for i, s in enumerate(config['shape'][1:-1]):
-            layers.append(self.ffunit(int(s[0]*H), int(s[1]*H), config['dropout'][i]))
-        layers.append([nn.Linear(int(config['shape'][-1][0]*H), D_out)])
-        self.layers = [l for ffu in layers for l in ffu] # flatten
-        self.layers = nn.ModuleList(self.layers)  
-        
-    def ffunit(self, D_in, D_out, drop):
-        ffu = []
-        ffu.append(nn.BatchNorm1d(D_in))
-        ffu.append(nn.Linear(D_in, D_out))
-        ffu.append(nn.SELU())
-        ffu.append(nn.Dropout(drop))
-        return ffu
+class QModel(nn.Module, ABC):
+    """An abstract base class for Fastchem models
+    embeddings = [(n_vocab, len_vec, param.requires_grad),...]"""
  
+    def __init__(self, embeddings=[]):
+        super().__init__()
+        #self.embeddings = self.embedding_layer(embeddings)
+        #self.layers = nn.ModuleList(layers)
+    
+    def embedding_layer(self, embeddings):
+        if len(embeddings) == 0:
+            return []
+        else:
+            embeddings = [nn.Embedding(voc, vec).to('cuda:0') for voc, vec, _ in embeddings]
+            for i, e in enumerate(embeddings):
+                param = self.embeddings[i].weight
+                param.requires_grad = e[2]
+            return embeddings
+
     def forward(self, x_con, x_cat):
         # check for categorical and/or continuous inputs, get the embeddings and  
         # concat as appropriate, feed to model
@@ -53,15 +42,45 @@ class FFNet(nn.Module):
         for l in self.layers:
             x = l(x)
         return x
-    
+        
     def adapt(self, shape):
-        # for adapting a dataset (shape[0]) to a saved model and weights (shape[1])
+        """for adapting a dataset shape[0] to a saved model shape[1]"""
         # freeze the layers
         for param in self.parameters(): 
             param.requires_grad = False
         # prepend a trainable adaptor layer    
         for l in self.ffunit(shape[0], shape[1], 0.2)[::-1]:
             self.layers.insert(0, l)
+            
+    def ffunit(self, D_in, D_out, drop):
+        ffu = []
+        ffu.append(nn.BatchNorm1d(D_in))
+        ffu.append(nn.Linear(D_in, D_out))
+        ffu.append(nn.SELU())
+        ffu.append(nn.Dropout(drop))
+        return ffu
+    
+    
+class FFNet(QModel):
+    
+    model_config = {}
+    model_config['simple'] = {'shape': [('D_in',1),(1,1),(1,1/2),(1/2,'D_out')], 
+                              'dropout': [.2, .3, .1]}
+    model_config['funnel'] = {'shape': [('D_in',1),(1,1/2),(1/2,1/2),(1/2,1/4),(1/4,1/4),(1/4,'D_out')], 
+                              'dropout': [.1, .2, .3, .2, .1]}
+
+    def __init__(self, model_name='funnel', D_in=0, H=0, D_out=0, embeddings=[]):
+        super().__init__()
+        self.embeddings = self.embedding_layer(embeddings)
+            
+        config = FFNet.model_config[model_name]
+        layers = []
+        layers.append(self.ffunit(D_in, int(config['shape'][0][1]*H), config['dropout'][0]))
+        for i, s in enumerate(config['shape'][1:-1]):
+            layers.append(self.ffunit(int(s[0]*H), int(s[1]*H), config['dropout'][i]))
+        layers.append([nn.Linear(int(config['shape'][-1][0]*H), D_out)])
+        self.layers = [l for ffu in layers for l in ffu] # flatten
+        self.layers = nn.ModuleList(self.layers)  
     
     
 class MAB(nn.Module):
@@ -128,7 +147,7 @@ class PMA(nn.Module):
         return self.mab(self.S.repeat(X.size(0), 1, 1), X)
     
     
-class SetTransformer(nn.Module):
+class SetTransformer(QModel):
     """https://github.com/juho-lee/set_transformer"""
     def __init__(self, dim_input, num_outputs, dim_output,
             num_inds=32, dim_hidden=128, num_heads=4, ln=False):

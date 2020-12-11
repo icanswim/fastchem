@@ -241,13 +241,16 @@ class QM9(QDataset):
         
     def load_data(self, in_dir, n, filter_on, use_pickle): 
         
-        if os.path.exists('./data/qm9/'+use_pickle):
+        if use_pickle and os.path.exists('./data/qm9/'+use_pickle):
             print('loading QM9 datadic from a pickled copy...')
             datadic = pickle.load(open('./data/qm9/'+use_pickle, 'rb'))
         else:
+            print('creating QM9 dataset...')
+            i = 0
             datadic = {}
             for filename in sorted(os.listdir(in_dir)):
                 if filename.endswith('.xyz'):
+                    i += 1
                     datadic[int(filename[-10:-4])] = QM9Mol(in_dir+filename)
                     if filter_on:
                         val = self.load_feature(datadic[int(filename[-10:-4])], 
@@ -257,7 +260,9 @@ class QM9(QDataset):
                         if eval(val+filter_on[1]+filter_on[2]):
                             del datadic[int(filename[-10:-4])]
                         
-                    if len(datadic) % 10000 == 1: print('QM9 molecules created:', len(datadic))
+                    if i % 10000 == 1: 
+                        print('QM9 molecules scanned: ', i)
+                        print('QM9 molecules created: ', len(datadic))
                     if len(datadic) > n - 1:
                         break
                        
@@ -384,33 +389,44 @@ class ANI1x(QDataset):
         datadic = {}
         with h5py.File(in_file, 'r') as f:
             for mol in f.keys():
-                data = {}
-                ci = self.get_conformation_index(f[mol])
-                for attr in features+target:
-                    if np.isnan(f[mol][attr][()]).any(): 
-                        continue
-                    elif attr == 'atomic_numbers':
-                        data[attr] = f[mol][attr][()]
-                        datadic[mol] = data
-                    else:
-                        data[attr] = f[mol][attr][ci]
-                        datadic[mol] = data
+                nan = False  
+                while not nan:  # if empty values break out and del mol
+                    data = {}
+                    ci, nan = self.get_conformation_index(f[mol])
+                    for attr in features+target:
+                        if np.isnan(f[mol][attr][()]).any():
+                            nan = True
+                        if attr == 'atomic_numbers':
+                            data[attr] = f[mol][attr][()]
+                            datadic[mol] = data
+                        else: 
+                            data[attr] = f[mol][attr][ci]
+                            datadic[mol] = data
+                    break
+                if nan: 
+                    try: del datadic[mol]
+                    except: pass
+                        
         return datadic
     
     def get_conformation_index(self, mol):
-        
+        """each molecular formula (mol) may have many different isomers"""
+        nan = False
+        ci = 0
         if isinstance(self.conformation, int):
-            return self.conformation
-        if self.conformation == 'all':
-            return ()
-        if self.conformation == 'random':
+            ci = self.conformation
+        elif self.conformation == 'all':
+            ci = ()
+        elif self.conformation == 'random':
             ci = random.randrange(mol[self.criterion].shape[0])
-        if self.conformation == 'max':
+        elif self.conformation == 'max':
             ci = np.argmax(mol[self.criterion], axis=0)
-        if self.conformation == 'min':
+        elif self.conformation == 'min':
             ci = np.argmin(mol[self.criterion], axis=0)
-                      
-        return ci
+        if np.isnan(mol[self.criterion]).any():
+            nan = True # criterion value is nan, throw out the mol
+     
+        return ci, nan
                 
 class QM7X(QDataset):
     """QM7-X: A comprehensive dataset of quantum-mechanical properties spanning 
@@ -547,7 +563,6 @@ class QM7X(QDataset):
         for set_id in QM7X.set_ids:
             handle = h5py.File(in_dir+set_id+'.hdf5', 'r')
             self.h5_handles.append(handle)
-        print('molecular formula loaded: ', len(self.ds_idx))
     
     @classmethod
     def map_dataset(cls, in_dir='./data/QM7X/', selector=[]):
@@ -650,10 +665,7 @@ class QM7b(QDataset):
                                        columns=QM7b.properties) # (7211, 14)
         self.y = self.properties.pop(self.target).values.reshape(1, -1) # (1, 7211) 
         self.ds_idx = list(range(self.coulomb.shape[0]))
-         
-        
-
-            
+          
         
 class Champs(QDataset):
     """https://www.kaggle.com/c/champs-scalar-coupling
