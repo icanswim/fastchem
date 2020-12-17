@@ -6,29 +6,35 @@ from math import sqrt
 
 class QModel(nn.Module, ABC):
     """An abstract base class for Fastchem models
-    embeddings = [(n_vocab, len_vec, param.requires_grad),...]"""
- 
-    def __init__(self, embeddings=[]):
+    embed = [(n_vocab, len_vec, param.requires_grad),...]
+        The QDataset reports any categorical values it to encode and whether 
+        or not to train the embedding or fix it as a onehot
+        and then serves up the values to be encoded as the x_cat component
+        of the __getitem__ method.
+    
+    self.embeddings = embedding_layer() method checks the QDatasets embed 
+    requirements and creates a list of embedding layers as appropriate"""
+    def __init__(self, embed=[]):
         super().__init__()
-        #self.embeddings = self.embedding_layer(embeddings)
+        self.embeddings = self.embedding_layer(embed)
         #self.layers = nn.ModuleList(layers)
     
-    def embedding_layer(self, embeddings):
-        if len(embeddings) == 0:
+    def embedding_layer(self, embed):
+        if len(embed) == 0:
             return []
         else:
-            embeddings = [nn.Embedding(voc, vec).to('cuda:0') for voc, vec, _ in embeddings]
-            for i, e in enumerate(embeddings):
-                param = self.embeddings[i].weight
+            embeddings = [nn.Embedding(voc, vec).to('cuda:0') for voc, vec, _ in embed]
+            for i, e in enumerate(embed):
+                param = embeddings[i].weight
                 param.requires_grad = e[2]
             return embeddings
 
     def forward(self, x_con, x_cat):
-        # check for categorical and/or continuous inputs, get the embeddings and  
-        # concat as appropriate, feed to model
+        """check for categorical and/or continuous inputs, get the embeddings and  
+        concat as appropriate, feed to model"""
         if len(x_cat) != 0:
             emb = []
-            for i in range(x_cat.shape[1]):
+            for i in range(x_cat.shape[0]):
                 out = self.embeddings[i](x_cat[:,i])
                 emb.append(out)
             emb = cat(emb, dim=1)
@@ -60,7 +66,6 @@ class QModel(nn.Module, ABC):
         ffu.append(nn.Dropout(drop))
         return ffu
     
-    
 class FFNet(QModel):
     
     model_config = {}
@@ -69,9 +74,9 @@ class FFNet(QModel):
     model_config['funnel'] = {'shape': [('D_in',1),(1,1/2),(1/2,1/2),(1/2,1/4),(1/4,1/4),(1/4,'D_out')], 
                               'dropout': [.1, .2, .3, .2, .1]}
 
-    def __init__(self, model_name='funnel', D_in=0, H=0, D_out=0, embeddings=[]):
+    def __init__(self, model_name='funnel', D_in=0, H=0, D_out=0, embed=[]):
         super().__init__()
-        self.embeddings = self.embedding_layer(embeddings)
+        self.embeddings = self.embedding_layer(embed)
             
         config = FFNet.model_config[model_name]
         layers = []
@@ -116,7 +121,7 @@ class MAB(nn.Module):
 class SAB(nn.Module):
     """Set Attention Block"""
     def __init__(self, dim_in, dim_out, num_heads, ln=False):
-        super(SAB, self).__init__()
+        super().__init__()
         self.mab = MAB(dim_in, dim_in, dim_out, num_heads, ln=ln)
 
     def forward(self, X):
@@ -125,7 +130,7 @@ class SAB(nn.Module):
 class ISAB(nn.Module):
     """Induced Set Attention Block"""
     def __init__(self, dim_in, dim_out, num_heads, num_inds, ln=False):
-        super(ISAB, self).__init__()
+        super().__init__()
         self.I = nn.Parameter(torch.Tensor(1, num_inds, dim_out))
         nn.init.xavier_uniform_(self.I)
         self.mab0 = MAB(dim_out, dim_in, dim_out, num_heads, ln=ln)
@@ -138,7 +143,7 @@ class ISAB(nn.Module):
 class PMA(nn.Module):
     """Pooling by Multihead Attention"""
     def __init__(self, dim, num_heads, num_seeds, ln=False):
-        super(PMA, self).__init__()
+        super().__init__()
         self.S = nn.Parameter(torch.Tensor(1, num_seeds, dim))
         nn.init.xavier_uniform_(self.S)
         self.mab = MAB(dim, dim, dim, num_heads, ln=ln)
@@ -150,8 +155,10 @@ class PMA(nn.Module):
 class SetTransformer(QModel):
     """https://github.com/juho-lee/set_transformer"""
     def __init__(self, dim_input, num_outputs, dim_output,
-            num_inds=32, dim_hidden=128, num_heads=4, ln=False):
-        super(SetTransformer, self).__init__()
+            num_inds=32, dim_hidden=128, num_heads=4, ln=False, embed=[]):
+        Super().__init__()
+        self.embeddings = self.embedding_layer(embed)
+        
         self.enc = nn.Sequential(
                 ISAB(dim_input, dim_hidden, num_heads, num_inds, ln=ln),
                 ISAB(dim_hidden, dim_hidden, num_heads, num_inds, ln=ln))
@@ -160,6 +167,6 @@ class SetTransformer(QModel):
                 SAB(dim_hidden, dim_hidden, num_heads, ln=ln),
                 SAB(dim_hidden, dim_hidden, num_heads, ln=ln),
                 nn.Linear(dim_hidden, dim_output))
-
+        
     def forward(self, X):
         return self.dec(self.enc(X))

@@ -125,11 +125,16 @@ class QM9Mol(Molecule):
         
 class QDataset(Dataset, ABC):
     """An abstract base class for quantum datasets
+    embed = [(n_vocab, len_vec, param.requires_grad),...]
+        The dataset reports if it has any categorical values it needs
+        to encode and whether or not to train the embedding or fix it as a onehot
+        and then serves up the values to be encoded as the x_cat component
+        of the __getitem__ methods output.
     """
     @abstractmethod
     def __init__(self, in_file='./data/datafile'):
         self.load_data(in_file)
-        self.embeddings = []  # [(n_vocab, len_vec, param.requires_grad),...]
+        self.embed = []  # [(n_vocab, len_vec, param.requires_grad),...]
         self.ds_idx = []  # list of the dataset's indices
     
     @abstractmethod
@@ -146,7 +151,11 @@ class QDataset(Dataset, ABC):
     @abstractmethod
     def load_data(self):
         return data
-
+    
+    def pad_data(self):
+        """TODO: pad in multiple dimensions and trim"""
+        pass
+    
 
 class QM9(QDataset):
     """http://quantum-machine.org/datasets/
@@ -221,7 +230,7 @@ class QM9(QDataset):
         self.features, self.target, self.pad = features, target, pad
         self.datadic = self.load_data(in_dir, n, filter_on, use_pickle)
         self.ds_idx = list(self.datadic.keys())
-        self.embeddings = []
+        self.embed = []
         self.x_cat = [] # no categorical features
     
     def __getitem__(self, i):
@@ -330,13 +339,45 @@ class ANI1x(QDataset):
     Indexed by a molecular formula and conformation index
     Returns [features,features,...,padding], [target,target,...]
     
+    Longest molecule is 63 atoms
+    
     criterion = the feature used to select the conformation
     conformation = logic used on the criterion feature
-        'low' - choose the index with the lowest value
-        'high' - choose the index with the highest value
+        'min' - choose the index with the lowest value
+        'max' - choose the index with the highest value
         'random' - choose the index randomly
+        'all' - choose all indices 
         int - choose the index int
     
+    Na = number of atoms, Nc = number of conformations
+    Atomic Positions ‘coordinates’ Å float32 (Nc, Na, 3)
+    Atomic Numbers   ‘atomic_numbers’ — uint8 (Na)
+    Total Energy     ‘wb97x_dz.energy’ Ha float64 (Nc)
+                     ‘wb97x_tz.energy’ Ha float64 (Nc)  
+                     ‘ccsd(t)_cbs.energy’ Ha float64 (Nc)
+    HF Energy        ‘hf_dz.energy’ Ha float64 (Nc)
+                     ‘hf_tz.energy’ Ha float64 (Nc)
+                     ‘hf_qz.energy’ Ha float64 (Nc)
+    NPNO-CCSD(T)     ‘npno_ccsd(t)_dz.corr_energy’ Ha float64 (Nc)
+    Correlation      ‘npno_ccsd(t)_tz.corr_energy’ Ha float64 (Nc)
+    Energy           ‘npno_ccsd(t)_qz.corr_energy’ Ha float64 (Nc)
+    MP2              ‘mp2_dz.corr_energy’ Ha float64 (Nc)
+    Correlation      ‘mp2_tz.corr_energy’ Ha float64 (Nc)
+    Energy           ‘mp2_qz.corr_energy’ Ha float64 (Nc)
+    Atomic Forces    ‘wb97x_dz.forces’ Ha/Å float32 (Nc, Na, 3)
+                     ‘wb97x_tz.forces’ Ha/Å float32 (Nc, Na, 3)
+    Molecular        ‘wb97x_dz.dipole’ e Å float32 (Nc, 3)
+    Electric         ‘wb97x_tz.dipole’ e Å float32 (Nc, 3)
+    Moments          ‘wb97x_tz.quadrupole’ e AA2 (Nc, 6)
+    Atomic           ‘wb97x_dz.cm5_charges’ e float32 (Nc, Na)
+    Charges          ‘wb97x_dz.hirshfeld_charges’ e float32 (Nc, Na)
+                     ‘wb97x_tz.mbis_charges’ e float32 (Nc, Na)
+    Atomic           ‘wb97x_tz.mbis_dipoles’ a.u. float32 (Nc, Na)
+    Electric         ‘wb97x_tz.mbis_quadrupoles’ a.u. float32 (Nc, Na)
+    Moments          ‘wb97x_tz.mbis_octupoles’ a.u. float32 (Nc, Na)
+    Atomic Volumes   ‘wb97x_tz.mbis_volumes’ a.u. float32 (Nc, Na)
+    
+    TODO: loading multiple isotopes per molecular formula
     """
     features = ['atomic_numbers', 'ccsd(t)_cbs.energy', 'coordinates', 'hf_dz.energy',
                 'hf_qz.energy', 'hf_tz.energy', 'mp2_dz.corr_energy', 'mp2_qz.corr_energy',
@@ -347,30 +388,42 @@ class ANI1x(QDataset):
                 'wb97x_tz.mbis_charges', 'wb97x_tz.mbis_dipoles', 'wb97x_tz.mbis_octupoles',
                 'wb97x_tz.mbis_quadrupoles', 'wb97x_tz.mbis_volumes']
     
-    def __init__(self, features=[], targets=[], pad=None, conformation='low', 
+    def __init__(self, features=[], targets=[], pad=63, conformation='min', 
                         criterion='wb97x_dz.energy', in_file='./data/ani1/ani1x-release.h5'):
         self.features, self.targets = features, targets
         self.conformation, self.criterion = conformation, criterion
         self.in_file, self.pad = in_file, pad
         self.datadic = self.load_data(features, targets, in_file)
-        self.embeddings = [] 
+        self.embed = []
+        if 'atomic_numbers' in self.features:
+            self.embed = [(5,32,True)] 
         self.ds_idx = list(self.datadic.keys())
     
     def __getitem__(self, i):
-        
+        #TODO mechanism to reshape and pad the different sized features
         def get_features(feature_list, dtype):
             data = []
             for f in feature_list:
-                data.append(np.reshape(self.datadic[i][f], -1).astype(dtype)) 
+                if f == 'atomic_numbers': pass
+                
+                else:
+                    out = np.reshape(self.datadic[i][f], -1).astype(dtype)
+                    if self.pad:
+                        print('out.shape: ', out.shape)
+                        out = np.pad(out, (0, (self.pad - out.shape[0])))
+                    data.append(out) 
             return np.concatenate(data)
                 
-        features = get_features(self.features, np.float32)
-        if self.pad:
-            features = np.pad(features, (0, (self.pad - len(features))))
-        
+        x_con  = get_features(self.features, np.float32)
+        x_cat = []
+        if 'atomic_numbers' in self.features:
+            x_cat = self.datadic[i]['atomic_numbers'].astype('int64')
+            if self.pad:
+                x_cat = np.pad(x_cat, (0, (self.pad - x_cat.shape[0])))
+          
         targets = get_features(self.targets, np.float64)
             
-        return as_tensor(features), [], as_tensor(targets)
+        return as_tensor(x_con), as_tensor(x_cat), as_tensor(targets)
     
     def __len__(self):
         return len(self.ds_idx)
@@ -514,6 +567,8 @@ class QM7X(QDataset):
         and selecting idconf keys.  
         returns mols[idmol] = [idconf,idconf,...]
         idconf, ID configuration (e.g., 'Geom-m1-i1-c1-opt', 'Geom-m1-i1-c1-50')
+        
+    TODO: loading multiple isotopes per molecular formula 
     """
     set_ids = ['1000', '2000', '3000', '4000', '5000', '6000', '7000', '8000']
     
@@ -526,7 +581,7 @@ class QM7X(QDataset):
     def __init__(self, features=['atNUM','atXYZ'], target=['eAT'], pad=None, 
                          in_dir='./data/qm7x/', selector=['i1-c1-opt']):
         self.features, self.target, self.pad, self.in_dir = features, target, pad, in_dir
-        self.embeddings = []
+        self.embed = []
         self.datamap = QM7X.map_dataset(in_dir, selector)
         self.ds_idx = list(self.datamap.keys())
         self.load_data(in_dir)
@@ -539,7 +594,7 @@ class QM7X(QDataset):
         else: j = i-1
         k = j // 1000  
         handle = self.h5_handles[k]
-        #given multiple conformations given a formula i one is randomly selected
+        #if multiple conformations for a given formula i, one is randomly selected
         conformations = self.datamap[i]
         conformation = random.choice(conformations)
         mol = handle[str(i)][conformation]
@@ -605,7 +660,7 @@ class QM7(QDataset):
     """
     def __init__(self, in_file = './data/qm7/qm7.mat'):
         self.load_data(in_file)
-        self.embeddings = []
+        self.embed = []
         self.x_cat = []
         
     def __getitem__(self, i): 
@@ -645,7 +700,7 @@ class QM7b(QDataset):
     def __init__(self, target, features=[], in_file='./data/qm7/qm7b.mat'):
         self.features = features
         self.target = target
-        self.embeddings = []
+        self.embed = []
         self.x_cat = []
         self.load_data(target, features, in_file)
         
@@ -693,7 +748,7 @@ class Champs(QDataset):
     
     def __init__(self, in_dir='./data/champs/', n=4658146, features=True, use_h5=False, infer=False):
         self.in_dir = in_dir
-        self.embeddings = [(8,128,True),(32,32,False),(4,64,True),(32,32,False),(4,64,True)]  
+        self.embed = [(8,128,True),(32,32,False),(4,64,True),(32,32,False),(4,64,True)]  
         self.con_ds, self.cat_ds, self.target_ds = self.load_data(self.in_dir, features, use_h5, infer)
         self.ds_idx = list(range(len(self.target_ds)))
         
@@ -812,7 +867,7 @@ class SuperSet(QDataset):
         self.pds = PrimaryDS(**p_params)
         self.sds = SecondaryDS(**s_params)
         
-        self.embeddings = self.pds.embeddings + self.sds.embeddings
+        self.embed = self.pds.embed + self.sds.embed
         self.ds_idx = self.pds.ds_idx 
         
     def __getitem__(self, i):

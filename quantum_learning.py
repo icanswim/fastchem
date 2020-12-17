@@ -37,14 +37,14 @@ class Learn():
         
         if load_model: 
             try:
-                model = Model(embeddings=self.ds.embeddings, **model_params)
+                model = Model(embed=self.ds.embed, **model_params)
                 model.load_state_dict(load(load_model))
                 print('model loaded from state_dict...')
             except:
                 model = load(load_model)
                 print('model loaded from pickle...')
         else: 
-            model = Model(embeddings=self.ds.embeddings, **model_params)
+            model = Model(embed=self.ds.embed, **model_params)
         if adapt: model.adapt(adapt)
         self.model = model.to('cuda:0')
         logging.info(self.model.children)
