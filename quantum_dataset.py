@@ -400,28 +400,25 @@ class ANI1x(QDataset):
         self.ds_idx = list(self.datadic.keys())
     
     def __getitem__(self, i):
-        #TODO mechanism to reshape and pad the different sized features
-        def get_features(feature_list, dtype):
+        
+        def get_features(features, dtype, exclude_atomicn=False):
             data = []
-            for f in feature_list:
-                if f == 'atomic_numbers': pass
-                
+            for f in features:
+                if f == 'atomic_numbers' and exclude_atomicn: pass
                 else:
                     out = np.reshape(self.datadic[i][f], -1).astype(dtype)
                     if self.pad:
-                        print('out.shape: ', out.shape)
                         out = np.pad(out, (0, (self.pad - out.shape[0])))
-                    data.append(out) 
+                    data.append(out)
             return np.concatenate(data)
-                
-        x_con  = get_features(self.features, np.float32)
+        
         x_cat = []
         if 'atomic_numbers' in self.features:
-            x_cat = self.datadic[i]['atomic_numbers'].astype('int64')
-            if self.pad:
-                x_cat = np.pad(x_cat, (0, (self.pad - x_cat.shape[0])))
-          
-        targets = get_features(self.targets, np.float64)
+            x_cat = get_features(['atomic_numbers'], 'int64')
+            
+        x_con = get_features(self.features, 'float32', exclude_atomicn=True)
+        
+        targets = get_features(self.targets, 'float64')
             
         return as_tensor(x_con), as_tensor(x_cat), as_tensor(targets)
     
