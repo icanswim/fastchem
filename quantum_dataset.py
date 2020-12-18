@@ -404,13 +404,29 @@ class ANI1x(QDataset):
         def get_features(features, dtype, exclude_atomicn=False):
             data = []
             for f in features:
-                if f == 'atomic_numbers' and exclude_atomicn: pass
-                else:
+                if f == 'atomic_numbers' and exclude_atomicn:
+                    continue
+                #(Na), (Nc, Na)    
+                elif f in ['atomic_numbers','wb97x_dz.cm5_charges',
+                           'wb97x_dz.hirshfeld_charges','wb97x_tz.mbis_charges',
+                           'wb97x_tz.mbis_dipoles','wb97x_tz.mbis_quadrupoles',
+                           'wb97x_tz.mbis_octupoles','wb97x_tz.mbis_volumes']:
                     out = np.reshape(self.datadic[i][f], -1).astype(dtype)
                     if self.pad:
-                        out = np.pad(out, (0, (self.pad - out.shape[0])))
-                    data.append(out)
-            return np.concatenate(data)
+                        out = np.pad(out, (0, (self.pad - out.shape[0])))        
+                #(Nc, Na, 3)   
+                elif f in ['coordinates','wb97x_dz.forces','wb97x_dz.forces']:
+                    out = np.reshape(self.datadic[i][f], -1).astype(dtype)
+                    if self.pad:
+                        out = np.pad(out, (0, (self.pad*3 - out.shape[0])))
+                #(Nc, 6), (Nc, 3), (Nc)
+                else:
+                    out = np.reshape(self.datadic[i][f], -1).astype(dtype)   
+                data.append(out)
+            if len(data) == 0:
+                return []
+            else: 
+                return np.concatenate(data)
         
         x_cat = []
         if 'atomic_numbers' in self.features:
