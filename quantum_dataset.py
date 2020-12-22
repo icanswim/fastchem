@@ -388,19 +388,19 @@ class ANI1x(QDataset):
                 'wb97x_tz.mbis_charges', 'wb97x_tz.mbis_dipoles', 'wb97x_tz.mbis_octupoles',
                 'wb97x_tz.mbis_quadrupoles', 'wb97x_tz.mbis_volumes']
     
-    def __init__(self, features=[], targets=[], pad=63, conformation='min', 
-                        criterion='wb97x_dz.energy', in_file='./data/ani1/ani1x-release.h5'):
+    def __init__(self, features=[], targets=[], pad=63, conformation='min',
+                       embed=[(9,16,True)], criterion='wb97x_dz.energy', 
+                       in_file='./data/ani1/ani1x-release.h5'):
         self.features, self.targets = features, targets
         self.conformation, self.criterion = conformation, criterion
         self.in_file, self.pad = in_file, pad
         self.datadic = self.load_data(features, targets, in_file)
         self.embed = []
         if 'atomic_numbers' in self.features:
-            self.embed = [(5,32,True)] 
+            self.embed = embed 
         self.ds_idx = list(self.datadic.keys())
     
     def __getitem__(self, i):
-        
         def get_features(features, dtype, exclude_atomicn=False):
             data = []
             for f in features:
@@ -424,19 +424,19 @@ class ANI1x(QDataset):
                     out = np.reshape(self.datadic[i][f], -1).astype(dtype)   
                 data.append(out)
             if len(data) == 0:
-                return []
+                return data
             else: 
                 return np.concatenate(data)
         
         x_cat = []
         if 'atomic_numbers' in self.features:
-            x_cat = get_features(['atomic_numbers'], 'int64')
+            x_cat.append(as_tensor(get_features(['atomic_numbers'], 'int64')))
             
         x_con = get_features(self.features, 'float32', exclude_atomicn=True)
         
         targets = get_features(self.targets, 'float64')
             
-        return as_tensor(x_con), as_tensor(x_cat), as_tensor(targets)
+        return as_tensor(x_con), x_cat, as_tensor(targets)
     
     def __len__(self):
         return len(self.ds_idx)

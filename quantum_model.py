@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from torch import nn, cat, squeeze, softmax, Tensor
+from torch import nn, cat, squeeze, softmax, Tensor, flatten
 from torch.nn import functional as F
 from math import sqrt
 
@@ -23,7 +23,7 @@ class QModel(nn.Module, ABC):
         if len(embed) == 0:
             return []
         else:
-            embeddings = [nn.Embedding(voc, vec).to('cuda:0') for voc, vec, _ in embed]
+            embeddings = [nn.Embedding(voc, vec, padding_idx=0).to('cuda:0') for voc, vec, _ in embed]
             for i, e in enumerate(embed):
                 param = embeddings[i].weight
                 param.requires_grad = e[2]
@@ -31,12 +31,14 @@ class QModel(nn.Module, ABC):
 
     def forward(self, x_con, x_cat):
         """check for categorical and/or continuous inputs, get the embeddings and  
-        concat as appropriate, feed to model"""
+        concat as appropriate, feed to model
+        x_cat = list of torch tensors which are the embedding indices
+        x_con = torch tensor of concatenated continous feature vectors"""
         if len(x_cat) != 0:
             emb = []
-            for i in range(x_cat.shape[0]):
-                out = self.embeddings[i](x_cat[:,i])
-                emb.append(out)
+            for i in range(len(x_cat)):
+                out = self.embeddings[i](x_cat[i]) 
+                emb.append(flatten(out, start_dim=1))
             emb = cat(emb, dim=1)
             if x_con.shape[1] != 0:
                 x = cat([x_con, emb], dim=1)
@@ -44,7 +46,7 @@ class QModel(nn.Module, ABC):
                 x = emb    
         else:
             x = x_con
-            
+        
         for l in self.layers:
             x = l(x)
         return x

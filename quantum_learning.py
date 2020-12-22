@@ -112,7 +112,7 @@ class Learn():
         for x_con, x_cat, y in dataloader:
             i += self.bs
             x_con = to_cuda(x_con)
-            x_cat = to_cuda(x_cat)
+            x_cat = [to_cuda(cat) for cat in x_cat]
             y_pred = self.model(x_con, x_cat)
             
             if flag == 'infer':
