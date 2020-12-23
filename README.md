@@ -70,6 +70,13 @@ https://github.com/netket/netket
 
 ### Datasets 
 
+GDB Databases
+https://gdb.unibe.ch/downloads/
+
+Alchemy: A Quantum Chemistry Dataset for Benchmarking AI Models
+https://arxiv.org/abs/1906.09427  
+https://github.com/tencent-alchemy/Alchemy
+
 QM7-X: A comprehensive dataset of quantum-mechanical properties spanning the chemical space of small organic molecules  
 https://arxiv.org/abs/2006.15139  
 https://zenodo.org/record/3905361

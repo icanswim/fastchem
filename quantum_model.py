@@ -31,9 +31,9 @@ class QModel(nn.Module, ABC):
 
     def forward(self, x_con, x_cat):
         """check for categorical and/or continuous inputs, get the embeddings and  
-        concat as appropriate, feed to model
-        x_cat = list of torch tensors which are the embedding indices
-        x_con = torch tensor of concatenated continous feature vectors"""
+        concat as appropriate, feed to model.  
+        x_cat = list of torch cuda tensors which are the embedding indices
+        x_con = torch cuda tensor of concatenated continous feature vectors"""
         if len(x_cat) != 0:
             emb = []
             for i in range(len(x_cat)):
@@ -72,7 +72,7 @@ class FFNet(QModel):
     
     model_config = {}
     model_config['simple'] = {'shape': [('D_in',1),(1,1),(1,1/2),(1/2,'D_out')], 
-                              'dropout': [.2, .3, .1]}
+                              'dropout': [.3, .4, .1]}
     model_config['funnel'] = {'shape': [('D_in',1),(1,1/2),(1/2,1/2),(1/2,1/4),(1/4,1/4),(1/4,'D_out')], 
                               'dropout': [.1, .2, .3, .2, .1]}
 
