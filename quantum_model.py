@@ -4,8 +4,8 @@ from torch.nn import functional as F
 from math import sqrt
 
 
-class QModel(nn.Module, ABC):
-    """An abstract base class for Fastchem models
+class QModel(nn.Module):
+    """A base class for Fastchem models
     embed = [(n_vocab, len_vec, param.requires_grad),...]
         The QDataset reports any categorical values it to encode and whether 
         or not to train the embedding or fix it as a onehot
@@ -16,12 +16,12 @@ class QModel(nn.Module, ABC):
     requirements and creates a list of embedding layers as appropriate"""
     def __init__(self, embed=[]):
         super().__init__()
-        self.embeddings = self.embedding_layer(embed)
-        #self.layers = nn.ModuleList(layers)
-    
+        #self.embeddings = self.embedding_layer(embed)
+        #self.layers = nn.ModuleList()
+        
     def embedding_layer(self, embed):
         if len(embed) == 0:
-            return []
+            return None
         else:
             embeddings = [nn.Embedding(voc, vec, padding_idx=0).to('cuda:0') for voc, vec, _ in embed]
             for i, e in enumerate(embed):
@@ -37,7 +37,7 @@ class QModel(nn.Module, ABC):
         if len(x_cat) != 0:
             emb = []
             for i in range(len(x_cat)):
-                out = self.embeddings[i](x_cat[i]) 
+                out = self.embeddings[i](x_cat[i])
                 emb.append(flatten(out, start_dim=1))
             emb = cat(emb, dim=1)
             if x_con.shape[1] != 0:
@@ -78,8 +78,7 @@ class FFNet(QModel):
 
     def __init__(self, model_name='funnel', D_in=0, H=0, D_out=0, embed=[]):
         super().__init__()
-        self.embeddings = self.embedding_layer(embed)
-            
+        
         config = FFNet.model_config[model_name]
         layers = []
         layers.append(self.ffunit(D_in, int(config['shape'][0][1]*H), config['dropout'][0]))
@@ -89,7 +88,8 @@ class FFNet(QModel):
         self.layers = [l for ffu in layers for l in ffu] # flatten
         self.layers = nn.ModuleList(self.layers)  
     
-    
+        self.embeddings = self.embedding_layer(embed)
+        
 class MAB(nn.Module):
     """Multihead Attention Block"""
     def __init__(self, dim_Q, dim_K, dim_V, num_heads, ln=False):

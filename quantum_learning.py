@@ -38,11 +38,21 @@ class Learn():
         if load_model: 
             try:
                 model = Model(embed=self.ds.embed, **model_params)
-                model.load_state_dict(load(load_model))
+                model.load_state_dict(load('./models/'+load_model))
                 print('model loaded from state_dict...')
             except:
-                model = load(load_model)
+                model = load('./models/'+load_model)
                 print('model loaded from pickle...')
+                
+            if model.embeddings:
+                for i, embedding in enumerate(model.embeddings):
+                    try:
+                        weight = np.load('./models/{}_{}_embedding_weight.npy').format(
+                                                                        load_model[:-3], i)
+                        embedding.from_pretrained(weight)
+                    except:
+                        continue
+                
         else: 
             model = Model(embed=self.ds.embed, **model_params)
         if adapt: model.adapt(adapt)
@@ -77,10 +87,18 @@ class Learn():
                 self.run('infer')
         
         elapsed = datetime.now() - start
-        if save_model and not adapt: save(self.model.state_dict(), './models/{}.pth'.format(
+        
+        if save_model:
+            if adapt: save(self.model, './models/{}.pth'.format(
                                                             start.strftime("%Y%m%d_%H%M")))
-        if save_model and adapt: save(self.model, './models/{}.pth'.format(
+            if not adapt: save(self.model.state_dict(), './models/{}.pth'.format(
                                                             start.strftime("%Y%m%d_%H%M")))
+            if self.model.embeddings:
+                for i, embedding in enumerate(self.model.embeddings):
+                    weight = embedding.weight.detach().cpu().numpy()
+                    np.save('./models/{}_{}_embedding_weight.npy'.format(
+                                             start.strftime("%Y%m%d_%H%M"), i), weight)
+                    
         logging.info('learning time: {} \n'.format(elapsed))
         print('learning time: {}'.format(elapsed))
         

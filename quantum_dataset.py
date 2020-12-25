@@ -388,16 +388,13 @@ class ANI1x(QDataset):
                 'wb97x_tz.mbis_charges', 'wb97x_tz.mbis_dipoles', 'wb97x_tz.mbis_octupoles',
                 'wb97x_tz.mbis_quadrupoles', 'wb97x_tz.mbis_volumes']
     
-    def __init__(self, features=[], targets=[], pad=63, conformation='min',
+    def __init__(self, features=['atomic_numbers'], targets=[], pad=63, conformation='min',
                        embed=[(9,16,True)], criterion='wb97x_dz.energy', 
                        in_file='./data/ani1/ani1x-release.h5'):
         self.features, self.targets = features, targets
         self.conformation, self.criterion = conformation, criterion
-        self.in_file, self.pad = in_file, pad
+        self.in_file, self.pad, self.embed = in_file, pad, embed
         self.datadic = self.load_data(features, targets, in_file)
-        self.embed = []
-        if 'atomic_numbers' in self.features:
-            self.embed = embed 
         self.ds_idx = list(self.datadic.keys())
     
     def __getitem__(self, i):
