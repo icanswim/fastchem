@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-from torch import device, nn, cuda, optim, no_grad, save, load, cat
+from torch import device, nn, cuda, optim, no_grad, save, load, cat, from_numpy
 from torch.utils.data import Sampler, DataLoader
 
 
@@ -47,12 +47,13 @@ class Learn():
             if model.embeddings:
                 for i, embedding in enumerate(model.embeddings):
                     try:
-                        weight = np.load('./models/{}_{}_embedding_weight.npy').format(
-                                                                        load_model[:-3], i)
-                        embedding.from_pretrained(weight)
+                        weight = np.load('./models/{}_{}_embedding_weight.npy'.format(
+                                                                    load_model[:-4], i))
+                        embedding.from_pretrained(from_numpy(weight), freeze=False)
+                        print('loading embedding weights...')
                     except:
-                        continue
-                
+                        print('no embedding weights found.  reinitializing... ')
+                                                                
         else: 
             model = Model(embed=self.ds.embed, **model_params)
         if adapt: model.adapt(adapt)

@@ -398,27 +398,37 @@ class ANI1x(QDataset):
         self.ds_idx = list(self.datadic.keys())
     
     def __getitem__(self, i):
-        def get_features(features, dtype, exclude_atomicn=False):
+        
+        ci, nan = self.get_conformation_index(self.datadic[i], self.conformation)
+        if nan:
+            print('mol lacks criterion values...')
+        
+        def get_features(features, dtype, exclude_cat=False):
             data = []
             for f in features:
-                if f == 'atomic_numbers' and exclude_atomicn:
+                if f == 'atomic_numbers' and exclude_cat:
                     continue
-                #(Na), (Nc, Na)    
-                elif f in ['atomic_numbers','wb97x_dz.cm5_charges',
-                           'wb97x_dz.hirshfeld_charges','wb97x_tz.mbis_charges',
-                           'wb97x_tz.mbis_dipoles','wb97x_tz.mbis_quadrupoles',
-                           'wb97x_tz.mbis_octupoles','wb97x_tz.mbis_volumes']:
+                #(Na)
+                elif f in ['atomic_numbers']:
                     out = np.reshape(self.datadic[i][f], -1).astype(dtype)
+                    if self.pad:
+                        out = np.pad(out, (0, (self.pad - out.shape[0])))          
+                #(Nc, Na)    
+                elif f in ['wb97x_dz.cm5_charges','wb97x_dz.hirshfeld_charges',
+                           'wb97x_tz.mbis_charges','wb97x_tz.mbis_dipoles',
+                           'wb97x_tz.mbis_quadrupoles','wb97x_tz.mbis_octupoles',
+                           'wb97x_tz.mbis_volumes']:
+                    out = np.reshape(self.datadic[i][f][ci], -1).astype(dtype)
                     if self.pad:
                         out = np.pad(out, (0, (self.pad - out.shape[0])))        
                 #(Nc, Na, 3)   
                 elif f in ['coordinates','wb97x_dz.forces','wb97x_dz.forces']:
-                    out = np.reshape(self.datadic[i][f], -1).astype(dtype)
+                    out = np.reshape(self.datadic[i][f][ci], -1).astype(dtype)
                     if self.pad:
                         out = np.pad(out, (0, (self.pad*3 - out.shape[0])))
                 #(Nc, 6), (Nc, 3), (Nc)
                 else:
-                    out = np.reshape(self.datadic[i][f], -1).astype(dtype)   
+                    out = np.reshape(self.datadic[i][f][ci], -1).astype(dtype)   
                 data.append(out)
             if len(data) == 0:
                 return data
@@ -429,7 +439,7 @@ class ANI1x(QDataset):
         if 'atomic_numbers' in self.features:
             x_cat.append(as_tensor(get_features(['atomic_numbers'], 'int64')))
             
-        x_con = get_features(self.features, 'float32', exclude_atomicn=True)
+        x_con = get_features(self.features, 'float32', exclude_cat=True)
         
         targets = get_features(self.targets, 'float64')
             
@@ -448,6 +458,8 @@ class ANI1x(QDataset):
         data_keys = ['wb97x_dz.dipoles'] 
         # A subset of this data was used for training the ACA charge model 
         (https://doi.org/10.1021/acs.jpclett.8b01939)
+        
+        ragged dataset each mol has all keys and nan for missing values
         """
         datadic = {}
         with h5py.File(in_file, 'r') as f:
@@ -455,15 +467,11 @@ class ANI1x(QDataset):
                 nan = False  
                 while not nan:  # if empty values break out and del mol
                     data = {}
-                    ci, nan = self.get_conformation_index(f[mol])
                     for attr in features+target:
                         if np.isnan(f[mol][attr][()]).any():
                             nan = True
-                        if attr == 'atomic_numbers':
+                        else:
                             data[attr] = f[mol][attr][()]
-                            datadic[mol] = data
-                        else: 
-                            data[attr] = f[mol][attr][ci]
                             datadic[mol] = data
                     break
                 if nan: 
@@ -472,19 +480,19 @@ class ANI1x(QDataset):
                         
         return datadic
     
-    def get_conformation_index(self, mol):
+    def get_conformation_index(self, mol, conformation):
         """each molecular formula (mol) may have many different isomers"""
         nan = False
         ci = 0
-        if isinstance(self.conformation, int):
-            ci = self.conformation
-        elif self.conformation == 'all':
+        if isinstance(conformation, int):
+            ci = conformation
+        elif conformation == 'all':
             ci = ()
-        elif self.conformation == 'random':
+        elif conformation == 'random':
             ci = random.randrange(mol[self.criterion].shape[0])
-        elif self.conformation == 'max':
+        elif conformation == 'max':
             ci = np.argmax(mol[self.criterion], axis=0)
-        elif self.conformation == 'min':
+        elif conformation == 'min':
             ci = np.argmin(mol[self.criterion], axis=0)
         if np.isnan(mol[self.criterion]).any():
             nan = True # criterion value is nan, throw out the mol

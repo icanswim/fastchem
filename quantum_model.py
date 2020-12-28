@@ -23,7 +23,7 @@ class QModel(nn.Module):
         if len(embed) == 0:
             return None
         else:
-            embeddings = [nn.Embedding(voc, vec, padding_idx=0).to('cuda:0') for voc, vec, _ in embed]
+            embeddings = [nn.Embedding(voc, vec, padding_idx=None).to('cuda:0') for voc, vec, _ in embed]
             for i, e in enumerate(embed):
                 param = embeddings[i].weight
                 param.requires_grad = e[2]
