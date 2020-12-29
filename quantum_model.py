@@ -72,7 +72,7 @@ class FFNet(QModel):
     
     model_config = {}
     model_config['simple'] = {'shape': [('D_in',1),(1,1),(1,1/2),(1/2,'D_out')], 
-                              'dropout': [.3, .4, .1]}
+                              'dropout': [.2, .3, .1]}
     model_config['funnel'] = {'shape': [('D_in',1),(1,1/2),(1/2,1/2),(1/2,1/4),(1/4,1/4),(1/4,'D_out')], 
                               'dropout': [.1, .2, .3, .2, .1]}
 

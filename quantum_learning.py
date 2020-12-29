@@ -26,7 +26,7 @@ class Learn():
         """
         logging.basicConfig(filename='./logs/quantum.log', level=20)
         start = datetime.now()
-        logging.info('New experiment...\n\n model: {}, start time: {}'.format(
+        logging.info('\nNew experiment...\n\n model: {}, start time: {}'.format(
                                         Model, start.strftime('%Y%m%d_%H%M')))
         self.bs = batch_size
         self.ds = Dataset(**ds_params)
@@ -61,6 +61,7 @@ class Learn():
         logging.info(self.model.children)
         
         self.sampler = Sampler(self.ds.ds_idx, **sample_params)
+        logging.info('sampler: {}\n{}'.format(type(self.sampler), sample_params))
         
         if Criterion:
             self.criterion = Criterion(**crit_params).to('cuda:0')
@@ -180,17 +181,19 @@ class Selector(Sampler):
     TODO memory optimization
     """
    
-    def __init__(self, dataset_idx, split=.1, subset=False):
+    def __init__(self, dataset_idx, split=.1, subset=False, set_seed=False):
         self.split = split 
         if subset:
             self.dataset_idx = random.sample(dataset_idx, int(len(dataset_idx)*subset))
         else:    
             self.dataset_idx = dataset_idx
         
+        if set_seed: random.seed(set_seed)
         random.shuffle(self.dataset_idx)
         cut = int(len(self.dataset_idx)*self.split)
         self.test_idx = self.dataset_idx[:cut]
         self.train_val_idx = self.dataset_idx[cut:]
+        random.seed()
 
     def __iter__(self):
         if self.flag == 'train':

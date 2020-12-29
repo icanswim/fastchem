@@ -345,8 +345,7 @@ class ANI1x(QDataset):
     conformation = logic used on the criterion feature
         'min' - choose the index with the lowest value
         'max' - choose the index with the highest value
-        'random' - choose the index randomly
-        'all' - choose all indices 
+        'random' - choose the index randomly 
         int - choose the index int
     
     Na = number of atoms, Nc = number of conformations
@@ -388,21 +387,19 @@ class ANI1x(QDataset):
                 'wb97x_tz.mbis_charges', 'wb97x_tz.mbis_dipoles', 'wb97x_tz.mbis_octupoles',
                 'wb97x_tz.mbis_quadrupoles', 'wb97x_tz.mbis_volumes']
     
-    def __init__(self, features=['atomic_numbers'], targets=[], pad=63, conformation='min',
-                       embed=[(9,16,True)], criterion='wb97x_dz.energy', 
+    def __init__(self, features=['atomic_numbers'], targets=[], pad=63,
+                       embed=[(9,16,True)], criterion=None, conformation='min',
                        in_file='./data/ani1/ani1x-release.h5'):
         self.features, self.targets = features, targets
-        self.conformation, self.criterion = conformation, criterion
-        self.in_file, self.pad, self.embed = in_file, pad, embed
+        self.conformation, self.embed  = conformation, embed
+        self.in_file, self.pad, self.criterion = in_file, pad, criterion
+
         self.datadic = self.load_data(features, targets, in_file)
         self.ds_idx = list(self.datadic.keys())
     
     def __getitem__(self, i):
         
-        ci, nan = self.get_conformation_index(self.datadic[i], self.conformation)
-        if nan:
-            print('mol lacks criterion values...')
-        
+        ci = self.get_conformation_index(self.datadic[i])
         def get_features(features, dtype, exclude_cat=False):
             data = []
             for f in features:
@@ -460,18 +457,21 @@ class ANI1x(QDataset):
         (https://doi.org/10.1021/acs.jpclett.8b01939)
         
         ragged dataset each mol has all keys and nan for missing values
+        throws out the mol if any of the feature values or criterion feature values are missing
         """
+        attributes = features+target
+        if self.criterion not None and not in attributes:
+            attributes.append(self.criterion)
         datadic = {}
         with h5py.File(in_file, 'r') as f:
             for mol in f.keys():
-                nan = False  
                 while not nan:  # if empty values break out and del mol
                     data = {}
                     for attr in features+target:
                         if np.isnan(f[mol][attr][()]).any():
                             nan = True
                         else:
-                            data[attr] = f[mol][attr][()]
+                            data[attr] = f[mol][attr]
                             datadic[mol] = data
                     break
                 if nan: 
@@ -480,24 +480,26 @@ class ANI1x(QDataset):
                         
         return datadic
     
-    def get_conformation_index(self, mol, conformation):
-        """each molecular formula (mol) may have many different isomers"""
-        nan = False
-        ci = 0
-        if isinstance(conformation, int):
-            ci = conformation
-        elif conformation == 'all':
-            ci = ()
-        elif conformation == 'random':
-            ci = random.randrange(mol[self.criterion].shape[0])
-        elif conformation == 'max':
-            ci = np.argmax(mol[self.criterion], axis=0)
-        elif conformation == 'min':
-            ci = np.argmin(mol[self.criterion], axis=0)
-        if np.isnan(mol[self.criterion]).any():
-            nan = True # criterion value is nan, throw out the mol
-     
-        return ci, nan
+    def get_conformation_index(self, mol):
+        """each molecular formula (mol) may have many different isomers
+        select the conformation based on some criterion (attribute value)
+        """
+        if self.criterion == None:
+            criterion = self.target[0]
+        else:
+            criterion = self.criterion
+            
+        ci = 0        
+        if isinstance(self.conformation, int):
+            ci = self.conformation
+        elif self.conformation == 'random':
+            ci = random.randrange(mol[criterion].shape[0])
+        elif self.conformation == 'max':
+            ci = np.argmax(mol[criterion], axis=0)
+        elif self.conformation == 'min':
+            ci = np.argmin(mol[criterion], axis=0)
+        
+        return ci
                 
 class QM7X(QDataset):
     """QM7-X: A comprehensive dataset of quantum-mechanical properties spanning 
