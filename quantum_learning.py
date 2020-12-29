@@ -14,16 +14,17 @@ from torch.utils.data import Sampler, DataLoader
 
 
 class Learn():
-    
+    """
+    save_model = True/False
+    load_model = False/'./models/savedmodel.pth'
+    Criterion = None implies inference mode.
+    adapt = False/(dataset input shape, model input shape) 
+    """
     def __init__(self, Dataset, Model, Sampler, Optimizer=None, Criterion=None, 
                  model_params={}, ds_params={}, opt_params={}, crit_params={},sample_params={},
-                 batch_size=1, epochs=1, save_model=False, load_model=False, adapt=False):
-        """
-        save_model = True/False
-        load_model = False/'./models/savedmodel.pth'
-        Criterion = None implies inference mode.
-        adapt = False/(dataset input shape, model input shape) 
-        """
+                 save_model=False, load_model=False, load_embed=False, adapt=False,
+                 batch_size=1, epochs=1):
+        
         logging.basicConfig(filename='./logs/quantum.log', level=20)
         start = datetime.now()
         logging.info('\nNew experiment...\n\n model: {}, start time: {}'.format(
@@ -35,28 +36,33 @@ class Learn():
                                     epochs, batch_size, save_model, load_model))
         print('{} dataset created...'.format(type(self.ds)))
         
-        if load_model: 
+        if load_model:
             try:
                 model = Model(embed=self.ds.embed, **model_params)
                 model.load_state_dict(load('./models/'+load_model))
                 print('model loaded from state_dict...')
             except:
                 model = load('./models/'+load_model)
-                print('model loaded from pickle...')
+                print('model loaded from pickle...')                                                   
+            else:
+                print('model failed to load...')
                 
-            if model.embeddings:
-                for i, embedding in enumerate(model.embeddings):
-                    try:
-                        weight = np.load('./models/{}_{}_embedding_weight.npy'.format(
-                                                                    load_model[:-4], i))
-                        embedding.from_pretrained(from_numpy(weight), freeze=False)
-                        print('loading embedding weights...')
-                    except:
-                        print('no embedding weights found.  reinitializing... ')
-                                                                
-        else: 
+        else:
             model = Model(embed=self.ds.embed, **model_params)
-        if adapt: model.adapt(adapt)
+        
+        if load_embed:
+            for i, embedding in enumerate(model.embeddings):
+                try:
+                    weight = np.load('./models/{}_{}_embedding_weight.npy'.format(
+                                                                load_embed, i))
+                    embedding.from_pretrained(from_numpy(weight), freeze=False)
+                    print('loading embedding weights...')
+                except:
+                    print('no embedding weights found.  reinitializing... ')
+                    
+        if adapt: 
+            model.adapt(adapt)
+            
         self.model = model.to('cuda:0')
         logging.info(self.model.children)
         
