@@ -386,7 +386,7 @@ class ANI1x(QDataset):
                 'wb97x_tz.mbis_quadrupoles', 'wb97x_tz.mbis_volumes']
     
     def __init__(self, features=['atomic_numbers'], targets=[], pad=63,
-                       embed=[(9,16,True)], criterion=None, conformation='min',
+                       embed=[(9,16,True)], criterion=None, conformation='random',
                        in_file='./data/ani1/ani1x-release.h5'):
         self.features, self.targets = features, targets
         self.conformation, self.embed  = conformation, embed
@@ -484,7 +484,7 @@ class ANI1x(QDataset):
         select the conformation based on some criterion (attribute value)
         """
         if self.criterion == None:
-            criterion = self.target[0]
+            criterion = self.targets[0]
         else:
             criterion = self.criterion
             
