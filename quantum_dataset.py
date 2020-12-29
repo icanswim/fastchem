@@ -375,8 +375,6 @@ class ANI1x(QDataset):
     Electric         ‘wb97x_tz.mbis_quadrupoles’ a.u. float32 (Nc, Na)
     Moments          ‘wb97x_tz.mbis_octupoles’ a.u. float32 (Nc, Na)
     Atomic Volumes   ‘wb97x_tz.mbis_volumes’ a.u. float32 (Nc, Na)
-    
-    TODO: loading multiple isotopes per molecular formula
     """
     features = ['atomic_numbers', 'ccsd(t)_cbs.energy', 'coordinates', 'hf_dz.energy',
                 'hf_qz.energy', 'hf_tz.energy', 'mp2_dz.corr_energy', 'mp2_qz.corr_energy',
@@ -398,8 +396,8 @@ class ANI1x(QDataset):
         self.ds_idx = list(self.datadic.keys())
     
     def __getitem__(self, i):
-        
         ci = self.get_conformation_index(self.datadic[i])
+        
         def get_features(features, dtype, exclude_cat=False):
             data = []
             for f in features:
@@ -460,18 +458,19 @@ class ANI1x(QDataset):
         throws out the mol if any of the feature values or criterion feature values are missing
         """
         attributes = features+target
-        if self.criterion not None and not in attributes:
+        if self.criterion != None and self.criterion not in attributes:
             attributes.append(self.criterion)
         datadic = {}
         with h5py.File(in_file, 'r') as f:
             for mol in f.keys():
+                nan = False
                 while not nan:  # if empty values break out and del mol
                     data = {}
-                    for attr in features+target:
+                    for attr in attributes:
                         if np.isnan(f[mol][attr][()]).any():
                             nan = True
                         else:
-                            data[attr] = f[mol][attr]
+                            data[attr] = f[mol][attr][()]
                             datadic[mol] = data
                     break
                 if nan: 
