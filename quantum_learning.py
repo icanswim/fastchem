@@ -27,7 +27,7 @@ class Learn():
         
         logging.basicConfig(filename='./logs/quantum.log', level=20)
         start = datetime.now()
-        logging.info('\nNew experiment...\n\n model: {}, start time: {}'.format(
+        logging.info('New experiment...\n\n model: {}, start time: {}'.format(
                                         Model, start.strftime('%Y%m%d_%H%M')))
         self.bs = batch_size
         self.ds = Dataset(**ds_params)
@@ -44,8 +44,6 @@ class Learn():
             except:
                 model = load('./models/'+load_model)
                 print('model loaded from pickle...')                                                   
-            else:
-                print('model failed to load...')
                 
         else:
             model = Model(embed=self.ds.embed, **model_params)
@@ -55,7 +53,8 @@ class Learn():
                 try:
                     weight = np.load('./models/{}_{}_embedding_weight.npy'.format(
                                                                 load_embed, i))
-                    embedding.from_pretrained(from_numpy(weight), freeze=False)
+                    embedding.from_pretrained(from_numpy(weight), 
+                                              freeze=self.ds.embed[i][2])
                     print('loading embedding weights...')
                 except:
                     print('no embedding weights found.  reinitializing... ')
@@ -134,7 +133,7 @@ class Learn():
         def to_cuda(data):
             if len(data) == 0: return []
             else: return data.to('cuda:0', non_blocking=True)
-     
+
         for x_con, x_cat, y in dataloader:
             i += self.bs
             x_con = to_cuda(x_con)
@@ -194,7 +193,8 @@ class Selector(Sampler):
         else:    
             self.dataset_idx = dataset_idx
         
-        if set_seed: random.seed(set_seed)
+        if set_seed: 
+            random.seed(set_seed)
         random.shuffle(self.dataset_idx)
         cut = int(len(self.dataset_idx)*self.split)
         self.test_idx = self.dataset_idx[:cut]

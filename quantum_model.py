@@ -7,7 +7,7 @@ from math import sqrt
 class QModel(nn.Module):
     """A base class for Fastchem models
     embed = [(n_vocab, len_vec, param.requires_grad),...]
-        The QDataset reports any categorical values it to encode and whether 
+        The QDataset reports any categorical values it has to encode and whether 
         or not to train the embedding or fix it as a onehot
         and then serves up the values to be encoded as the x_cat component
         of the __getitem__ method.
